@@ -37,8 +37,6 @@ object Build extends sbt.Build{
 
   )
 
-  lazy val root = cross.root.aggregate(sharedJs, sharedJvm)
-
   val sharedSettings = Seq(
     scalaVersion := "2.11.2",
     target := target.value / "shared",
