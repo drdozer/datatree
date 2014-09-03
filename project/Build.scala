@@ -41,7 +41,9 @@ object Build extends sbt.Build{
 
   val sharedSettings = Seq(
     scalaVersion := "2.11.2",
-    target := target.value / "js",
+    target := target.value / "shared",
+    organization := "uk.co.turingatemyhamster",
+    version := "0.1.0",
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "acyclic" % "0.1.2" % "provided",
       "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
@@ -50,14 +52,12 @@ object Build extends sbt.Build{
     addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.2")
   )
   lazy val sharedJvm = project.in(file("shared")).settings(sharedSettings:_*).settings(
-    scalaVersion := "2.11.2",
     target := target.value / "jvm",
-    moduleName := "shared"
+    moduleName := "datatree-shared"
   )
   lazy val sharedJs = project.in(file("shared")).settings(scalaJSSettings ++ sharedSettings:_*).settings(
-    scalaVersion := "2.11.2",
     target := target.value / "js",
-    moduleName := "shared"
+    moduleName := "datatree-shared"
   )
   lazy val js = cross.js.dependsOn(sharedJs % "compile->compile;test->test").settings(
     scalaVersion := "2.11.2",
