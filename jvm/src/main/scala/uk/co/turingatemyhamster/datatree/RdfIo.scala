@@ -3,7 +3,7 @@ package uk.co.turingatemyhamster.datatree
 import javax.xml.namespace.QName
 import javax.xml.stream.{XMLStreamConstants, XMLStreamReader, XMLStreamWriter}
 
-import uk.co.turingatemyhamster.cake.ScalaRelations
+import uk.co.turingatemyhamster.cake.{Relations, ScalaRelations}
 
 object RdfIo
 {
@@ -12,7 +12,7 @@ object RdfIo
   private val BooleanR = """((true)|(false))""".r
   private val TypedR = """([^^]*)^^(.*)""".r
 
-  def apply[DT <: Datatree with ScalaRelations { type Name = QName; type URI = java.net.URI} ](dt: DT) = new
+  def apply[DT <: Datatree with Relations { type Name = QName; type URI = java.net.URI} ](dt: DT) = new
   {
     import dt._
 
@@ -24,15 +24,16 @@ object RdfIo
 
     def read(reader: XMLStreamReader): DocumentRoot = {
 
-      def readBindings(): Seq[NamespaceBinding] =
-        for(i <- 0 until reader.getNamespaceCount) yield
-          NamespaceBinding(reader.getNamespacePrefix(i), URI(reader.getNamespaceURI(i)))
+      def readBindings(): ZeroMany[NamespaceBinding] =
+        ZeroMany(
+          (for(i <- 0 until reader.getNamespaceCount) yield
+            NamespaceBinding(reader.getNamespacePrefix(i), URI(reader.getNamespaceURI(i)))) :_*)
 
-      def readTopLevelDocuments(): Seq[TopLevelDocument] = reader.next() match {
+      def readTopLevelDocuments(): ZeroMany[TopLevelDocument] = reader.next() match {
         case XMLStreamConstants.START_ELEMENT =>
           readTopLevelDocument() +: readTopLevelDocuments()
         case XMLStreamConstants.END_ELEMENT =>
-          Vector()
+          ZeroMany()
         case XMLStreamConstants.CHARACTERS =>
           readTopLevelDocuments()
       }
@@ -47,18 +48,19 @@ object RdfIo
       }
 
       def readDocument(): (ZeroMany[NamespaceBinding], One[URI], One[Name], ZeroMany[NamedProperty]) = {
-        val rdfType = new QName(reader.getNamespaceURI, reader.getLocalName, reader.getPrefix)
+        val rdfType = One(
+          Name(reader.getNamespaceURI, URI(reader.getLocalName), reader.getPrefix))
         val bindings = readBindings()
         val identity = readIdentity()
         val properties = readProperties()
         (bindings, identity, rdfType, properties)
       }
 
-      def readProperties(): Seq[NamedProperty] = reader.next() match {
+      def readProperties(): ZeroMany[NamedProperty] = reader.next() match {
         case XMLStreamConstants.START_ELEMENT =>
           readProperty() +: readProperties()
         case XMLStreamConstants.END_ELEMENT =>
-          Vector()
+          ZeroMany()
         case XMLStreamConstants.CHARACTERS =>
           readProperties()
       }
@@ -68,8 +70,9 @@ object RdfIo
         readValue())
 
       def readIdentity(): One[URI] =
-        URI(reader.getAttribute(rdf_about).headOption.getOrElse(
-          throw new IllegalStateException("Expecting rdf:about at " + reader.getName)))
+        One(
+          URI(reader.getAttribute(rdf_about).headOption.getOrElse(
+          throw new IllegalStateException("Expecting rdf:about at " + reader.getName))))
 
       def readTagName(): QName = new QName(reader.getNamespaceURI, reader.getLocalName, reader.getPrefix)
 
@@ -133,10 +136,10 @@ object RdfIo
       }
 
       def writeDocument(doc: Document): Unit = {
-        writer.writeStartElement(doc.`type`)
-        writeBindings(doc.bindings)
-        writer.writeAttribute(rdf_about, doc.identity)
-        writeProperties(doc.properties)
+        writer.writeStartElement(doc.`type`.theOne)
+        writeBindings(doc.bindings.seq)
+        writer.writeAttribute(rdf_about, doc.identity.theOne)
+        writeProperties(doc.properties.seq)
         writer.writeEndElement()
       }
 
@@ -162,10 +165,10 @@ object RdfIo
 
       writer.writeStartElement(rdf_rdf)
 
-      val bindings = if(docRoot.bindings.contains(rdf)) docRoot.bindings else docRoot.bindings :+ rdf
-      writeBindings(bindings)
+      val bindings = if(docRoot.bindings.seq.contains(rdf)) docRoot.bindings else docRoot.bindings :+ rdf
+      writeBindings(bindings.seq)
       
-      for(d <- docRoot.documents) {
+      for(d <- docRoot.documents.seq) {
         writeDocument(d)
       }
 

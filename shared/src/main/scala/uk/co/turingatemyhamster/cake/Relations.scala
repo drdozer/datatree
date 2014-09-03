@@ -46,10 +46,14 @@ trait Relations {
 
   trait ZeroManyOps[T] {
     def seq(zm: ZeroMany[T]): Seq[T]
+    def +: (zm: ZeroMany[T], t: T): ZeroMany[T]
+    def :+ (zm: ZeroMany[T], t: T): ZeroMany[T]
   }
 
   implicit class ZeroManySyntax[T](val _zmt: ZeroMany[T])(implicit ops: ZeroManyOps[T]) {
     def seq = ops.seq(_zmt)
+    def +: (t: T) = ops.+:(_zmt, t)
+    def :+ (t: T) = ops.:+(_zmt, t)
   }
 
   implicit def oneManyOps[T]: OneManyOps[T]

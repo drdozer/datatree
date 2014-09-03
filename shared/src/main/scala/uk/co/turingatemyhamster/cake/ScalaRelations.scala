@@ -38,6 +38,8 @@ trait ScalaRelations extends Relations {
 
   override implicit def zeroManyOps[T] = new ZeroManyOps[T] {
     override def seq(zm: ZeroMany[T]) = zm
+    override def +:(zm: ZeroMany[T], t: T) = zm.+:(t)
+    override def :+(zm: ZeroMany[T], t: T) = zm.:+(t)
   }
 
   override implicit def oneManyOps[T] = new OneManyOps[T] {
