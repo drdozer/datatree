@@ -45,10 +45,11 @@ object Build extends sbt.Build{
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "acyclic" % "0.1.2" % "provided",
       "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
-      "com.lihaoyi" %%% "utest" % "0.2.0"
+      "com.lihaoyi" %%% "utest" % "0.2.3"
     ),
     addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.2")
-  )
+  ) ++ net.virtualvoid.sbt.graph.Plugin.graphSettings
+
   lazy val sharedJvm = project.in(file("shared")).settings(sharedSettings:_*).settings(
     target := target.value / "jvm",
     moduleName := "datatree-shared"
@@ -60,11 +61,10 @@ object Build extends sbt.Build{
   lazy val js = cross.js.dependsOn(sharedJs % "compile->compile;test->test").settings(
     scalaVersion := "2.11.2",
     (jsEnv in Test) := new NodeJSEnv
-  )
+  ).settings(net.virtualvoid.sbt.graph.Plugin.graphSettings :_*)
   lazy val jvm = cross.jvm.dependsOn(sharedJvm % "compile->compile;test->test").settings(
     scalaVersion := "2.11.2",
     resolvers += "bintray/non" at "http://dl.bintray.com/non/maven",
     libraryDependencies += "org.jsawn" %% "jawn-parser" % "0.5.4"
-  )
+  ).settings(net.virtualvoid.sbt.graph.Plugin.graphSettings :_*)
 }
-
