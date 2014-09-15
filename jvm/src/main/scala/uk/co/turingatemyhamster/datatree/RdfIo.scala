@@ -3,87 +3,62 @@ package uk.co.turingatemyhamster.datatree
 import javax.xml.namespace.QName
 import javax.xml.stream.{XMLStreamConstants, XMLStreamReader, XMLStreamWriter}
 
-import uk.co.turingatemyhamster.cake.{Relations, ScalaRelations}
+import uk.co.turingatemyhamster.relations.{Relations, RelationsOps}
+import uk.co.turingatemyhamster.web.{Web, WebOps}
 
-object RdfIo
-{
-  private val DoubleR = """([+-]?\d+\.\d*(e[+-]\d*)?)""".r
-  private val IntegerR = """([+-]?\d+)""".r
-  private val BooleanR = """((true)|(false))""".r
-  private val TypedR = """([^^]*)^^(.*)""".r
+trait RdfIo extends Datatree {
+  importedPackage : WebOps
+    with RelationsOps
+    with DatatreeOps =>
 
-  def apply[DT <: Datatree with Relations { type Name = QName; type URI = java.net.URI} ](dt: DT) = new
-  {
-    import dt._
+  implicit val RDF: RDF
 
-    private val rdf = NamespaceBinding(prefix = "rdf", namespaceURI = URI("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))
-    private val rdf_rdf = rdf.withLocalName("rdf")
-    private val rdf_about = rdf.withLocalName("about")
-    private val rdf_resource = rdf.withLocalName("resource")
-    private val rdf_datatype = rdf.withLocalName("datatype")
+  trait RDF {
 
-    def read(reader: XMLStreamReader): DocumentRoot = {
+    implicit val qname2name: javax.xml.namespace.QName => QName
+    implicit val name2qname: QName => javax.xml.namespace.QName
 
-      def readBindings(): ZeroMany[NamespaceBinding] =
-        ZeroMany(
-          (for(i <- 0 until reader.getNamespaceCount) yield
-            NamespaceBinding(reader.getNamespacePrefix(i), URI(reader.getNamespaceURI(i)))) :_*)
+    private val rdf = NamespaceBinding(prefix = Prefix("rdf"), namespace = Namespace(Uri(("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))))
+    private val rdf_rdf = rdf.qName(LocalName("rdf"))
+    private val rdf_about = rdf.qName(LocalName("about"))
+    private val rdf_resource = rdf.qName(LocalName("resource"))
+    private val rdf_datatype = rdf.qName(LocalName("datatype"))
 
-      def readTopLevelDocuments(): ZeroMany[TopLevelDocument] = reader.next() match {
-        case XMLStreamConstants.START_ELEMENT =>
-          readTopLevelDocument() +: readTopLevelDocuments()
-        case XMLStreamConstants.END_ELEMENT =>
-          ZeroMany()
-        case XMLStreamConstants.CHARACTERS =>
-          readTopLevelDocuments()
+    object read {
+      val DoubleR = """([+-]?\d+\.\d*(e[+-]\d*)?)""".r
+      val IntegerR = """([+-]?\d+)""".r
+      val BooleanR = """((true)|(false))""".r
+      val TypedR = """([^^]*)^^(.*)""".r
+
+      implicit class EnhancedReader(val _reader: XMLStreamReader) {
+
+        def checkState(eventType: Int, msg: => String): Unit = {
+          if(_reader.getEventType != eventType)
+            throw new IllegalStateException(msg)
+        }
+
+        def getAttribute(attrName: QName): Seq[String] = for {
+          i <- 0 until _reader.getAttributeCount if (_reader.getAttributeName(i) : QName) == attrName
+        } yield _reader.getAttributeValue(i)
+
       }
 
-      def readTopLevelDocument(): TopLevelDocument = {
-        val (nsb, id, tp, np) = readDocument()
-        TopLevelDocument(nsb, id, tp, np)
-      }
-      def readNestedDocument(): NestedDocument = {
-        val (nsb, id, tp, np) = readDocument()
-        NestedDocument(nsb, id, tp, np)
-      }
+      def value(implicit reader: XMLStreamReader): One[PropertyValue] = {
 
-      def readDocument(): (ZeroMany[NamespaceBinding], One[URI], One[Name], ZeroMany[NamedProperty]) = {
-        val rdfType = One(
-          Name(reader.getNamespaceURI, URI(reader.getLocalName), reader.getPrefix))
-        val bindings = readBindings()
-        val identity = readIdentity()
-        val properties = readProperties()
-        (bindings, identity, rdfType, properties)
-      }
+        def makeLiteral(text: String): Literal = text match {
+          case DoubleR(d) => DoubleLiteral(d.toDouble)
+          case IntegerR(i) => IntegerLiteral(i.toInt)
+          case BooleanR(b) => BooleanLiteral(b.toBoolean)
+          case s => StringLiteral(s)
+        }
 
-      def readProperties(): ZeroMany[NamedProperty] = reader.next() match {
-        case XMLStreamConstants.START_ELEMENT =>
-          readProperty() +: readProperties()
-        case XMLStreamConstants.END_ELEMENT =>
-          ZeroMany()
-        case XMLStreamConstants.CHARACTERS =>
-          readProperties()
-      }
-
-      def readProperty(): NamedProperty = NamedProperty(
-        readTagName(),
-        readValue())
-
-      def readIdentity(): One[URI] =
-        One(
-          URI(reader.getAttribute(rdf_about).headOption.getOrElse(
-          throw new IllegalStateException("Expecting rdf:about at " + reader.getName))))
-
-      def readTagName(): QName = new QName(reader.getNamespaceURI, reader.getLocalName, reader.getPrefix)
-
-      def readValue(): PropertyValue = {
         val lit = reader.getAttribute(rdf_resource).headOption match {
           case Some(resource) =>
-            UriLiteral(URI(resource))
+            UriLiteral(Uri(resource))
           case None =>
             reader.next() match {
               case XMLStreamConstants.START_ELEMENT =>
-                readNestedDocument()
+                nestedDocument
               case XMLStreamConstants.CHARACTERS =>
                 val text = reader.getText
                 makeLiteral(text)
@@ -91,68 +66,147 @@ object RdfIo
         }
         reader.next() match {
           case XMLStreamConstants.END_ELEMENT =>
-            lit
+            One(lit)
           case XMLStreamConstants.START_ELEMENT =>
-            readNestedDocument()
+            One(nestedDocument(reader))
         }
       }
 
-      def makeLiteral(text: String): Literal = text match {
-        case DoubleR(d) => DoubleLiteral(d.toDouble)
-        case IntegerR(i) => IntegerLiteral(i.toInt)
-        case BooleanR(b) => BooleanLiteral(b.toBoolean)
-        case s => StringLiteral(s)
-      }
+      def tagName(implicit reader: XMLStreamReader): One[QName] =
+        One(
+          QName(
+            Namespace(Uri(reader.getNamespaceURI)),
+            LocalName(reader.getLocalName),
+            Prefix(reader.getPrefix)))
 
-      val rd = reader.next() match {
+      def identity(implicit reader: XMLStreamReader): One[Uri] =
+        One(
+          Uri(reader.getAttribute(rdf_about).headOption.getOrElse(
+            throw new IllegalStateException("Expecting rdf:about at " + reader.getName + " searching with " + rdf_about))))
+
+      def property(implicit reader: XMLStreamReader): NamedProperty = NamedProperty(
+        name = tagName,
+        propertyValue = value)
+
+      def properties(implicit reader: XMLStreamReader): ZeroMany[NamedProperty] = reader.next() match {
         case XMLStreamConstants.START_ELEMENT =>
-          DocumentRoot(
-            readBindings(),
-            readTopLevelDocuments())
+          property +: properties
+        case XMLStreamConstants.END_ELEMENT =>
+          ZeroMany()
+        case XMLStreamConstants.CHARACTERS =>
+          properties
       }
 
-      while(reader.hasNext) {
-        reader.next match {
-          case XMLStreamConstants.START_ELEMENT =>
-            println("Starting: " + reader.getName)
-          case XMLStreamConstants.END_ELEMENT =>
-            println("Ending: " + reader.getName)
-          case XMLStreamConstants.CHARACTERS =>
-            println("Characters: " + reader.getText)
-          case XMLStreamConstants.END_DOCUMENT =>
-            println("End document")
-        }
+      def document(implicit reader: XMLStreamReader): (ZeroMany[NamespaceBinding], One[Uri], One[QName], ZeroMany[NamedProperty]) = {
+        reader.checkState(XMLStreamConstants.START_ELEMENT, "Expecting state START_ELEMENT while reading a document")
+        val tp = tagName
+        val bs = bindings
+        val id = identity
+        val ps = properties
+        (bs, id, tp, ps)
       }
 
-      rd
+      def nestedDocument(implicit reader: XMLStreamReader): NestedDocument = {
+        reader.checkState(XMLStreamConstants.START_ELEMENT, "Expecting state START_ELEMENT while reading a nested document")
+        val (nsb, id, tp, np) = document
+        NestedDocument(
+          bindings = nsb,
+          identity = id,
+          `type` = tp,
+          properties = np)
+      }
+
+      def topLevelDocument(implicit reader: XMLStreamReader): TopLevelDocument = {
+        reader.checkState(XMLStreamConstants.START_ELEMENT, "Expecting state START_ELEMENT while reading a top-level document")
+        val (nsb, id, tp, np) = document
+        TopLevelDocument(
+          bindings = nsb,
+          identity = id,
+          `type` = tp,
+          properties = np)
+      }
+
+      def topLevelDocuments(implicit reader: XMLStreamReader): ZeroMany[TopLevelDocument] = reader.next() match {
+        case XMLStreamConstants.START_ELEMENT =>
+          topLevelDocument +: topLevelDocuments
+        case XMLStreamConstants.END_ELEMENT =>
+          ZeroMany()
+        case XMLStreamConstants.CHARACTERS =>
+          topLevelDocuments
+      }
+
+      def bindings(implicit reader: XMLStreamReader): ZeroMany[NamespaceBinding] = {
+        reader.checkState(XMLStreamConstants.START_ELEMENT, "Expected to be in START_ELEMENT state when reading bindings")
+        ZeroMany(
+          (for (i <- 0 until reader.getNamespaceCount) yield
+            NamespaceBinding(
+              prefix = Prefix(reader.getNamespacePrefix(i)),
+              namespace = Namespace(Uri(reader.getNamespaceURI(i))))): _*)
+      }
+
+      def documentRoot(implicit reader: XMLStreamReader): DocumentRoot = {
+        reader.checkState(XMLStreamConstants.START_ELEMENT, "Expecting start of document")
+
+        DocumentRoot(
+          bindings,
+          topLevelDocuments)
+      }
+
+      def apply[T](reader: XMLStreamReader, readFunc: (XMLStreamReader) => T): T = {
+        reader.checkState(XMLStreamConstants.START_DOCUMENT, "Expecting start of document")
+        reader.next()
+
+        val rd = readFunc(reader)
+        reader.next()
+        reader.checkState(XMLStreamConstants.END_DOCUMENT, "Expecting end of document")
+        rd
+      }
+
+      def apply(reader: XMLStreamReader): DocumentRoot =
+        apply(reader, documentRoot(_))
     }
 
-    def write(writer: XMLStreamWriter, docRoot: DocumentRoot): Unit = {
+    object write {
 
-      def writeBindings(bs: Seq[NamespaceBinding]): Unit = {
+      implicit class EnhancedWriter(val _writer: XMLStreamWriter) {
+
+        def writeStartElement(tag: QName): Unit =
+        {
+          _writer.writeStartElement(tag.prefix.raw, tag.localName.raw, tag.namespace.uri.raw)
+        }
+
+        def writeAttribute(attrName: QName, value: Uri): Unit =
+          writeAttribute(attrName, value.raw)
+
+        def writeAttribute(attrName: QName, value: String): Unit =
+          _writer.writeAttribute(
+            attrName.prefix.raw, attrName.namespace.uri.raw, attrName.localName.raw, value)
+      }
+
+      def bindings(bs: Seq[NamespaceBinding])(implicit writer: XMLStreamWriter): Unit = {
         for(b <- bs) {
-          writer.writeNamespace(b.prefix, b.namespaceURI.toString)
+          writer.writeNamespace(b.prefix.raw, b.namespace.uri.raw)
         }
       }
 
-      def writeDocument(doc: Document): Unit = {
-        writer.writeStartElement(doc.`type`.theOne)
-        writeBindings(doc.bindings.seq)
-        writer.writeAttribute(rdf_about, doc.identity.theOne)
-        writeProperties(doc.properties.seq)
+      def document(doc: Document)(implicit writer: XMLStreamWriter): Unit = {
+        writer.writeStartElement(doc.`type`.theOne : QName)
+        bindings(doc.bindings.seq)
+        writer.writeAttribute(rdf_about : QName, doc.identity.theOne)
+        properties(doc.properties.seq)
         writer.writeEndElement()
       }
 
-      def writeProperties(props: Seq[NamedProperty]): Unit = {
+      def properties(props: Seq[NamedProperty])(implicit writer: XMLStreamWriter): Unit = {
         for(p <- props) {
-          writer.writeStartElement(p.name)
+          writer.writeStartElement(p.name.theOne : QName)
           p.propertyValue match {
             case nd : NestedDocument =>
-              writeDocument(nd)
+              document(nd)
             case ul : UriLiteral =>
-              writer.writeAttribute(rdf_resource, ul.value)
+              writer.writeAttribute(rdf_resource : QName, ul.value)
             case tl : TypedLiteral =>
-              writer.writeAttribute(rdf_datatype, tl.xsdType)
+              writer.writeAttribute(rdf_datatype : QName, tl.xsdType)
               writer.writeCharacters(tl.value)
             case l : Literal =>
               writer.writeCharacters(l.value.toString)
@@ -161,39 +215,30 @@ object RdfIo
         }
       }
 
-      writer.writeStartDocument()
+      def documentRoot(docRoot: DocumentRoot)(implicit writer: XMLStreamWriter): Unit = {
+        writer.writeStartElement(rdf_rdf : QName)
 
-      writer.writeStartElement(rdf_rdf)
+        val bs = if(docRoot.bindings.seq.contains(rdf)) docRoot.bindings else docRoot.bindings :+ rdf
+        bindings(bs.seq)
 
-      val bindings = if(docRoot.bindings.seq.contains(rdf)) docRoot.bindings else docRoot.bindings :+ rdf
-      writeBindings(bindings.seq)
-      
-      for(d <- docRoot.documents.seq) {
-        writeDocument(d)
+        for(d <- docRoot.documents.seq) {
+          document(d)
+        }
+
+        writer.writeEndElement()
       }
 
-      writer.writeEndDocument()
-      writer.flush()
+      def apply[T](writer: XMLStreamWriter, t: T, writeFunc: (T, XMLStreamWriter) => Unit): Unit = {
+        writer.writeStartDocument()
+
+        writeFunc(t, writer)
+
+        writer.writeEndDocument()
+        writer.flush()
+      }
+
+      def apply(writer: XMLStreamWriter, docRoot: DocumentRoot): Unit =
+        apply(writer, docRoot, (dr: DocumentRoot, w: XMLStreamWriter) => documentRoot(dr)(w))
     }
-  }
-
-  implicit class EnhancedReader(val _reader: XMLStreamReader) extends AnyVal {
-
-    def getAttribute(attrName: QName): Seq[String] = for {
-      i <- 0 until _reader.getAttributeCount if _reader.getAttributeName(i) == attrName
-    } yield _reader.getAttributeValue(i)
-
-  }
-
-  implicit class EnhancedWriter(val _writer: XMLStreamWriter) extends AnyVal {
-
-    def writeStartElement(tag: QName): Unit =
-      _writer.writeStartElement(tag.getPrefix, tag.getLocalPart, tag.getNamespaceURI)
-    
-    def writeAttribute(attrName: QName, value: java.net.URI): Unit =
-      writeAttribute(attrName, value.toString)
-
-    def writeAttribute(attrName: QName, value: String): Unit =
-      _writer.writeAttribute(attrName.getPrefix, attrName.getNamespaceURI, attrName.getLocalPart, value)
   }
 }

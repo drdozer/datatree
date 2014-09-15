@@ -1,8 +1,7 @@
 package uk.co.turingatemyhamster.datatree
 
-import javax.xml.namespace.QName
-
-import uk.co.turingatemyhamster.cake.{ScalaRelations, Relations}
+import uk.co.turingatemyhamster.relations.{RelationsOps, Relations}
+import uk.co.turingatemyhamster.web.{WebOps, Web}
 
 import scala.annotation.{StaticAnnotation, implicitNotFound}
 import language.experimental.macros
@@ -12,19 +11,16 @@ import language.experimental.macros
  *
  * @author Matthew Pocock
  */
-trait Datatree {
-  importedPackage : Relations =>
-
-  type Name
-  type URI
+abstract class Datatree extends Web with Relations {
+  importedPackages : RelationsOps =>
 
   trait WithBindings {
     def bindings: ZeroMany[NamespaceBinding]
   }
 
   trait Document extends WithBindings {
-    def identity: One[URI]
-    def `type`: One[Name]
+    def identity: One[Uri]
+    def `type`: One[QName]
     def properties: ZeroMany[NamedProperty]
   }
 
@@ -33,18 +29,19 @@ trait Datatree {
     extends WithBindings
 
   case class TopLevelDocument(bindings: ZeroMany[NamespaceBinding] = ZeroMany(),
-                              identity: One[URI],
-                              `type`: One[Name],
+                              identity: One[Uri],
+                              `type`: One[QName],
                               properties: ZeroMany[NamedProperty] = ZeroMany())
     extends Document
 
   case class NestedDocument(bindings: ZeroMany[NamespaceBinding] = ZeroMany(),
-                            identity: One[URI],
-                            `type`: One[Name],
+                            identity: One[Uri],
+                            `type`: One[QName],
                             properties: ZeroMany[NamedProperty] = ZeroMany())
     extends Document with PropertyValue
 
-  case class NamedProperty(name: Name, propertyValue: PropertyValue)
+  case class NamedProperty(name: One[QName],
+                           propertyValue: One[PropertyValue])
 
   sealed trait PropertyValue
 
@@ -69,21 +66,13 @@ trait Datatree {
     type Value = Boolean
   }
 
-  case class UriLiteral(value: URI) extends Literal {
-    type Value = URI
+  case class UriLiteral(value: Uri) extends Literal {
+    type Value = Uri
   }
 
   case class TypedLiteral(value: String, xsdType: String) extends Literal {
     type Value = String
   }
-
-  case class NamespaceBinding(prefix: String, namespaceURI: URI) {
-    def withLocalName(localPart: String): Name = Name(prefix, namespaceURI, localPart)
-    def uri(localPart: String): URI = URI(namespaceURI + localPart)
-  }
-
-  def URI(uri: String): URI
-  def Name(prefix: String, namespaceURI: URI, localPart: String): Name
 }
 
 @implicitNotFound(
@@ -92,15 +81,37 @@ trait Datatree {
   def build(t: T): D
 }
 
-object Datatree extends ScalaRelations with Datatree {
-  override type Name = QName
-  override type URI = java.net.URI
+trait DatatreeOps {
+  importedPackage : Datatree
+    with WebOps
+    with RelationsOps =>
 
-  override def URI(uri: String) = java.net.URI.create(uri)
+  trait UriApi {
+    def apply(uri: String): Uri
+    def unapply(uri: Uri): Option[String]
+  }
 
-  override def Name(prefix: String, namespaceURI: URI, localName: String) =
-    new QName(namespaceURI.toString, localName, prefix)
+  implicit class DocumentRootSyntax(_dr: DocumentRoot) {
+    def unusedBinding(b: NamespaceBinding): Boolean = ! usedBinding(b)
+    def usedBinding(b: NamespaceBinding): Boolean =
+      (b.prefix == Prefix("rdf")) ||
+      _dr.documents.seq.exists(_.usedBinding(b))
+  }
+
+  implicit class DocumentSyntax(_doc: Document) {
+    def unusedBinding(b: NamespaceBinding): Boolean = ! usedBinding(b)
+    def usedBinding(b: NamespaceBinding): Boolean =
+      (QNameSyntax(_doc.`type`.theOne).prefix == b.prefix) ||
+      _doc.properties.seq.exists(_.usedBinding(b))
+  }
+
+  implicit class NamedPropertySyntax(_np: NamedProperty) {
+    def unusedBinding(b: NamespaceBinding): Boolean = ! usedBinding(b)
+    def usedBinding(b: NamespaceBinding): Boolean =
+      _np.name.theOne.prefix == b.prefix
+  }
 }
+
 
 class rdfType(prefix: String, namespaceURI: String, localPart: String) extends StaticAnnotation
 class rdfProperty(prefix: String, namespaceURI: String, localPart: String) extends StaticAnnotation
