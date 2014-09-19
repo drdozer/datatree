@@ -40,7 +40,8 @@ abstract class Datatree extends Web with Relations {
                             properties: ZeroMany[NamedProperty] = ZeroMany())
     extends Document with PropertyValue
 
-  case class NamedProperty(name: One[QName],
+  case class NamedProperty(bindings: ZeroMany[NamespaceBinding] = ZeroMany(),
+                           name: One[QName],
                            propertyValue: One[PropertyValue])
 
   sealed trait PropertyValue
@@ -75,11 +76,6 @@ abstract class Datatree extends Web with Relations {
   }
 }
 
-@implicitNotFound(
-"Datatree does not know how to build [${D}]s from [${T}]s; define an implicit Builder[${T}, ${D}] to teach it how")
-  trait DatatreeBuilder[T, D] {
-  def build(t: T): D
-}
 
 trait DatatreeOps {
   importedPackage : Datatree
@@ -101,6 +97,7 @@ trait DatatreeOps {
   implicit class DocumentSyntax(_doc: Document) {
     def unusedBinding(b: NamespaceBinding): Boolean = ! usedBinding(b)
     def usedBinding(b: NamespaceBinding): Boolean =
+      (b.prefix == Prefix("rdf")) ||
       (QNameSyntax(_doc.`type`.theOne).prefix == b.prefix) ||
       _doc.properties.seq.exists(_.usedBinding(b))
   }
@@ -108,7 +105,17 @@ trait DatatreeOps {
   implicit class NamedPropertySyntax(_np: NamedProperty) {
     def unusedBinding(b: NamespaceBinding): Boolean = ! usedBinding(b)
     def usedBinding(b: NamespaceBinding): Boolean =
-      _np.name.theOne.prefix == b.prefix
+      (b.prefix == Prefix("rdf")) ||
+      _np.name.theOne.prefix == b.prefix || _np.propertyValue.theOne.usedBinding(b)
+  }
+
+  implicit class PropertyValueSyntax(_pv: PropertyValue) {
+    def unusedBinding(b: NamespaceBinding): Boolean = ! usedBinding(b)
+    def usedBinding(b: NamespaceBinding): Boolean = _pv match {
+      case nd : NestedDocument =>
+        (nd: Document).usedBinding(b)
+      case _ => false
+    }
   }
 }
 

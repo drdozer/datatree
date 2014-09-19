@@ -22,15 +22,15 @@ object RdfTest {
           identity = testSpace uri "tld1",
           `type` = sbol2 qName "Model",
           properties = Vector(
-            NamedProperty(sbol2 qName "language", StringLiteral("SBML")),
-            NamedProperty(sbol2 qName "source", UriLiteral(Uri("http://www.async.ece.utah.edu/LacI_Inverter.xml"))),
-            NamedProperty(sbol2 qName "role", UriLiteral(sbo.uri("0000062"))),
-            NamedProperty(testSpace qName "iMadeThis", NestedDocument(
+            NamedProperty(name = sbol2 qName "language", propertyValue = StringLiteral("SBML")),
+            NamedProperty(name = sbol2 qName "source", propertyValue = UriLiteral(Uri("http://www.async.ece.utah.edu/LacI_Inverter.xml"))),
+            NamedProperty(name = sbol2 qName "role", propertyValue = UriLiteral(sbo.uri("0000062"))),
+            NamedProperty(name = testSpace qName "iMadeThis", propertyValue = NestedDocument(
               bindings = Vector(),
               identity = testSpace uri "unicorn1",
               `type` = testSpace qName "unicorn",
               properties = Vector(
-                NamedProperty(testSpace qName "status", StringLiteral("endangered"))
+                NamedProperty(name = testSpace qName "status", propertyValue = StringLiteral("endangered"))
               )
             ))
           )

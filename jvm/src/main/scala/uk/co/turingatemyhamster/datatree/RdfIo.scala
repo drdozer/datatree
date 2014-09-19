@@ -1,6 +1,7 @@
 package uk.co.turingatemyhamster.datatree
 
-import javax.xml.namespace.QName
+import java.lang
+import javax.xml.namespace.{QName => jQName}
 import javax.xml.stream.{XMLStreamConstants, XMLStreamReader, XMLStreamWriter}
 
 import uk.co.turingatemyhamster.relations.{Relations, RelationsOps}
@@ -15,14 +16,14 @@ trait RdfIo extends Datatree {
 
   trait RDF {
 
-    implicit val qname2name: javax.xml.namespace.QName => QName
-    implicit val name2qname: QName => javax.xml.namespace.QName
+    implicit val qname2name: jQName => QName
+    implicit val name2qname: QName => jQName
 
-    private val rdf = NamespaceBinding(prefix = Prefix("rdf"), namespace = Namespace(Uri(("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))))
-    private val rdf_rdf = rdf.qName(LocalName("rdf"))
-    private val rdf_about = rdf.qName(LocalName("about"))
-    private val rdf_resource = rdf.qName(LocalName("resource"))
-    private val rdf_datatype = rdf.qName(LocalName("datatype"))
+    val rdf = NamespaceBinding(prefix = Prefix("rdf"), namespace = Namespace(Uri(("http://www.w3.org/1999/02/22-rdf-syntax-ns#"))))
+    val rdf_rdf = rdf.qName(LocalName("rdf"))
+    val rdf_about = rdf.qName(LocalName("about"))
+    val rdf_resource = rdf.qName(LocalName("resource"))
+    val rdf_datatype = rdf.qName(LocalName("datatype"))
 
     object read {
       val DoubleR = """([+-]?\d+\.\d*(e[+-]\d*)?)""".r
@@ -31,20 +32,120 @@ trait RdfIo extends Datatree {
       val TypedR = """([^^]*)^^(.*)""".r
 
       implicit class EnhancedReader(val _reader: XMLStreamReader) {
+        import XMLStreamConstants._
+        def pretty(et: Int): String = et match {
+          case START_ELEMENT => "START_ELEMENT"
+          case END_ELEMENT => "END_ELELEMENT"
+          case PROCESSING_INSTRUCTION => "PROCESSING_INSTRUCTION"
+          case CHARACTERS => "CHARACTERS"
+          case COMMENT => "COMMENT"
+          case SPACE => "SPACE"
+          case START_DOCUMENT => "START_DOCUMENT"
+          case END_DOCUMENT => "END_DOCUMENT"
+          case ENTITY_REFERENCE => "ENTITY_REFERENCE"
+          case ATTRIBUTE => "ATTRIBUTE"
+          case DTD => "DTD"
+          case CDATA => "CDATA"
+          case NAMESPACE => "NAMESPACE"
+          case NOTATION_DECLARATION => "NOTATIONAL_DECLARATION"
+          case ENTITY_DECLARATION => "ENTITY_DECLARATION"
+        }
+
+        def context = _reader.getEventType match {
+          case START_ELEMENT => s"<${_reader.getName}>"
+          case END_ELEMENT => s"</${_reader.getName}>"
+          case PROCESSING_INSTRUCTION => s"&${_reader.getPITarget};"
+          case CHARACTERS => s"`${_reader.getText}'"
+          case COMMENT => "COMMENT"
+          case SPACE => "SPACE"
+          case START_DOCUMENT => "START_DOCUMENT"
+          case END_DOCUMENT => "END_DOCUMENT"
+          case ENTITY_REFERENCE => "ENTITY_REFERENCE"
+          case ATTRIBUTE => "ATTRIBUTE"
+          case DTD => "DTD"
+          case CDATA => "CDATA"
+          case NAMESPACE => "NAMESPACE"
+          case NOTATION_DECLARATION => "NOTATIONAL_DECLARATION"
+          case ENTITY_DECLARATION => "ENTITY_DECLARATION"
+        }
+
+        def nextContext = {
+          if(_reader.hasNext) {
+            _reader.next()
+            context
+          } else {
+            "__EOF__"
+          }
+        }
 
         def checkState(eventType: Int, msg: => String): Unit = {
           if(_reader.getEventType != eventType)
-            throw new IllegalStateException(msg)
+            throw new IllegalStateException(
+              s"$msg\nExpected ${pretty(eventType)} but got ${pretty(_reader.getEventType)} at ${context} followed by ${nextContext}")
+        }
+
+        def checkClosing(tn: jQName): Unit = {
+          val realTn = _reader.getName
+
+          if(tn != realTn)
+            throw new IllegalStateException(
+              s"Expected ${tn} but got ${realTn}")
         }
 
         def getAttribute(attrName: QName): Seq[String] = for {
           i <- 0 until _reader.getAttributeCount if (_reader.getAttributeName(i) : QName) == attrName
         } yield _reader.getAttributeValue(i)
 
+        def nextSkippingWhitespace(): Int = {
+          _reader.next()
+          skipWhitespace()
+        }
+
+        def skipWhitespace(): Int = {
+          while(_reader.getEventType() == XMLStreamConstants.CHARACTERS && _reader.getText.trim.length == 0) {
+            _reader.next()
+          }
+
+          _reader.getEventType
+        }
+
+        def parseElement[T](f: (QName, ZeroMany[NamespaceBinding], Map[QName, String]) => T): T = {
+          checkState(XMLStreamConstants.START_ELEMENT, "Starting to parse an element")
+
+          val tagName = _reader.getName()
+          val bindings = for(i <- 0 until _reader.getNamespaceCount) yield
+            NamespaceBinding(namespace = Namespace(Uri(_reader.getNamespaceURI(i))), prefix = Prefix(_reader.getNamespacePrefix(i)))
+          val attrs = for(i <- 0 until _reader.getAttributeCount) yield
+            (_reader.getAttributeName(i) : QName) -> _reader.getAttributeValue(i)
+
+          _reader.next()
+
+          val t = f(
+            tagName,
+            ZeroMany(bindings :_*),
+            attrs.toMap)
+
+          skipWhitespace()
+          checkState(XMLStreamConstants.END_ELEMENT, s"Ending parse of element $tagName")
+          checkClosing(tagName)
+          _reader.nextSkippingWhitespace()
+
+          t
+        }
+
+        def parseDocument[T](f: =>T): T = {
+          checkState(XMLStreamConstants.START_DOCUMENT, "Starting to parse document")
+          _reader.next()
+
+          val t = f
+
+          checkState(XMLStreamConstants.END_DOCUMENT, "Ending parse of document")
+
+          t
+        }
       }
 
-      def value(implicit reader: XMLStreamReader): One[PropertyValue] = {
-
+      def property(implicit reader: XMLStreamReader): NamedProperty = reader.parseElement { (qname, bindings, attrs) =>
         def makeLiteral(text: String): Literal = text match {
           case DoubleR(d) => DoubleLiteral(d.toDouble)
           case IntegerR(i) => IntegerLiteral(i.toInt)
@@ -52,62 +153,63 @@ trait RdfIo extends Datatree {
           case s => StringLiteral(s)
         }
 
-        val lit = reader.getAttribute(rdf_resource).headOption match {
+//        println(s"Reading property at ${reader.context}")
+        val v = attrs.get(rdf_resource).headOption match {
           case Some(resource) =>
-            UriLiteral(Uri(resource))
+//            println("Found resource")
+            val lit = UriLiteral(Uri(resource))
+            lit
           case None =>
-            reader.next() match {
-              case XMLStreamConstants.START_ELEMENT =>
-                nestedDocument
-              case XMLStreamConstants.CHARACTERS =>
+            reader.getEventType() match {
+              case XMLStreamConstants.CHARACTERS if reader.getText.trim.length != 0 =>
                 val text = reader.getText
-                makeLiteral(text)
+                val lit = makeLiteral(text)
+                reader.next()
+//                println(s"Read literal $lit} and advanced to ${reader.context}")
+                lit
+              case XMLStreamConstants.START_ELEMENT =>
+//                println(s"Found nested document at ${reader.context}")
+                val nd = nestedDocument
+//                println(s"Read nested document at ${reader.context}")
+                nd
+              case XMLStreamConstants.CHARACTERS =>
+                reader.nextSkippingWhitespace()
+//                println(s"Guessing nested document at ${reader.context}")
+                val nd = nestedDocument
+//                println(s"Read guessed nested document at ${reader.context}")
+                nd
             }
         }
-        reader.next() match {
-          case XMLStreamConstants.END_ELEMENT =>
-            One(lit)
-          case XMLStreamConstants.START_ELEMENT =>
-            One(nestedDocument(reader))
-        }
+
+        NamedProperty(
+          bindings = bindings,
+          name = One(qname),
+          propertyValue = One(v))
       }
 
-      def tagName(implicit reader: XMLStreamReader): One[QName] =
-        One(
-          QName(
-            Namespace(Uri(reader.getNamespaceURI)),
-            LocalName(reader.getLocalName),
-            Prefix(reader.getPrefix)))
-
-      def identity(implicit reader: XMLStreamReader): One[Uri] =
-        One(
-          Uri(reader.getAttribute(rdf_about).headOption.getOrElse(
-            throw new IllegalStateException("Expecting rdf:about at " + reader.getName + " searching with " + rdf_about))))
-
-      def property(implicit reader: XMLStreamReader): NamedProperty = NamedProperty(
-        name = tagName,
-        propertyValue = value)
-
-      def properties(implicit reader: XMLStreamReader): ZeroMany[NamedProperty] = reader.next() match {
+      def properties(implicit reader: XMLStreamReader): ZeroMany[NamedProperty] = reader.getEventType match {
         case XMLStreamConstants.START_ELEMENT =>
+//          println(s"Found a new property at ${reader.context}")
           property +: properties
         case XMLStreamConstants.END_ELEMENT =>
+//          println(s"Found end of properties at ${reader.context}")
           ZeroMany()
-        case XMLStreamConstants.CHARACTERS =>
+        case XMLStreamConstants.CHARACTERS if reader.getText.trim.length == 0 =>
+//          println(s"Skipping whitespace in properties at ${reader.context}")
+          reader.next()
           properties
       }
 
-      def document(implicit reader: XMLStreamReader): (ZeroMany[NamespaceBinding], One[Uri], One[QName], ZeroMany[NamedProperty]) = {
-        reader.checkState(XMLStreamConstants.START_ELEMENT, "Expecting state START_ELEMENT while reading a document")
-        val tp = tagName
-        val bs = bindings
-        val id = identity
+      def document(implicit reader: XMLStreamReader): (ZeroMany[NamespaceBinding], One[Uri], One[QName], ZeroMany[NamedProperty]) =
+      reader.parseElement { (qname, bindings, attrs) =>
+        val id = One(Uri(attrs.getOrElse(rdf_about,
+          throw new IllegalStateException("Expecting rdf:about at " + reader.getName + " searching with " + rdf_about))))
         val ps = properties
-        (bs, id, tp, ps)
+        (bindings, id, One(qname), ps)
       }
 
       def nestedDocument(implicit reader: XMLStreamReader): NestedDocument = {
-        reader.checkState(XMLStreamConstants.START_ELEMENT, "Expecting state START_ELEMENT while reading a nested document")
+        reader.checkState(XMLStreamConstants.START_ELEMENT, "Wrong state to start reading a nested document")
         val (nsb, id, tp, np) = document
         NestedDocument(
           bindings = nsb,
@@ -117,7 +219,7 @@ trait RdfIo extends Datatree {
       }
 
       def topLevelDocument(implicit reader: XMLStreamReader): TopLevelDocument = {
-        reader.checkState(XMLStreamConstants.START_ELEMENT, "Expecting state START_ELEMENT while reading a top-level document")
+        reader.checkState(XMLStreamConstants.START_ELEMENT, "Wrong state to start reading top level document")
         val (nsb, id, tp, np) = document
         TopLevelDocument(
           bindings = nsb,
@@ -126,26 +228,18 @@ trait RdfIo extends Datatree {
           properties = np)
       }
 
-      def topLevelDocuments(implicit reader: XMLStreamReader): ZeroMany[TopLevelDocument] = reader.next() match {
+      def topLevelDocuments(implicit reader: XMLStreamReader): ZeroMany[TopLevelDocument] = reader.getEventType match {
         case XMLStreamConstants.START_ELEMENT =>
           topLevelDocument +: topLevelDocuments
         case XMLStreamConstants.END_ELEMENT =>
           ZeroMany()
-        case XMLStreamConstants.CHARACTERS =>
+        case XMLStreamConstants.CHARACTERS if reader.getText.trim.length == 0 =>
+          reader.next()
           topLevelDocuments
       }
 
-      def bindings(implicit reader: XMLStreamReader): ZeroMany[NamespaceBinding] = {
-        reader.checkState(XMLStreamConstants.START_ELEMENT, "Expected to be in START_ELEMENT state when reading bindings")
-        ZeroMany(
-          (for (i <- 0 until reader.getNamespaceCount) yield
-            NamespaceBinding(
-              prefix = Prefix(reader.getNamespacePrefix(i)),
-              namespace = Namespace(Uri(reader.getNamespaceURI(i))))): _*)
-      }
-
-      def documentRoot(implicit reader: XMLStreamReader): DocumentRoot = {
-        reader.checkState(XMLStreamConstants.START_ELEMENT, "Expecting start of document")
+      def documentRoot(implicit reader: XMLStreamReader): DocumentRoot = reader.parseElement { (qname, bindings, attrs) =>
+        if(qname != rdf_rdf) throw new IllegalStateException("Expecting rdf:rdf but got $qname")
 
         DocumentRoot(
           bindings,
@@ -153,13 +247,9 @@ trait RdfIo extends Datatree {
       }
 
       def apply[T](reader: XMLStreamReader, readFunc: (XMLStreamReader) => T): T = {
-        reader.checkState(XMLStreamConstants.START_DOCUMENT, "Expecting start of document")
-        reader.next()
-
-        val rd = readFunc(reader)
-        reader.next()
-        reader.checkState(XMLStreamConstants.END_DOCUMENT, "Expecting end of document")
-        rd
+        reader.parseDocument {
+          readFunc(reader)
+        }
       }
 
       def apply(reader: XMLStreamReader): DocumentRoot =
@@ -197,21 +287,25 @@ trait RdfIo extends Datatree {
         writer.writeEndElement()
       }
 
+      def property(prop: NamedProperty)(implicit writer: XMLStreamWriter): Unit = {
+        writer.writeStartElement(prop.name.theOne : QName)
+        bindings(prop.bindings.seq)
+        prop.propertyValue match {
+          case nd : NestedDocument =>
+            document(nd)
+          case ul : UriLiteral =>
+            writer.writeAttribute(rdf_resource : QName, ul.value)
+          case tl : TypedLiteral =>
+            writer.writeAttribute(rdf_datatype : QName, tl.xsdType)
+            writer.writeCharacters(tl.value)
+          case l : Literal =>
+            writer.writeCharacters(l.value.toString)
+        }
+        writer.writeEndElement()      }
+
       def properties(props: Seq[NamedProperty])(implicit writer: XMLStreamWriter): Unit = {
         for(p <- props) {
-          writer.writeStartElement(p.name.theOne : QName)
-          p.propertyValue match {
-            case nd : NestedDocument =>
-              document(nd)
-            case ul : UriLiteral =>
-              writer.writeAttribute(rdf_resource : QName, ul.value)
-            case tl : TypedLiteral =>
-              writer.writeAttribute(rdf_datatype : QName, tl.xsdType)
-              writer.writeCharacters(tl.value)
-            case l : Literal =>
-              writer.writeCharacters(l.value.toString)
-          }
-          writer.writeEndElement()
+          property(p)
         }
       }
 
