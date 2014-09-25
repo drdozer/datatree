@@ -63,7 +63,7 @@ trait WebOps {
   
   trait PrefixedNameApi {
     def apply(prefix: Prefix, localName: LocalName): PrefixedName
-    def unappy(pn: PrefixedName): Option[(Prefix, LocalName)]
+    def unapply(pn: PrefixedName): Option[(Prefix, LocalName)]
   }
   
   val NamespaceLocal : NamespaceLocalApi
@@ -253,7 +253,7 @@ trait WebPairs {
 
   override val PrefixedName: PrefixedNameApi = new PrefixedNameApi {
     override def apply(prefix: Prefix, localName: LocalName) = PairsImpl.PrefixedName.apply(prefix, localName)
-    override def unappy(pn: PrefixedName) = PairsImpl.PrefixedName.unapply(pn)
+    override def unapply(pn: PrefixedName) = PairsImpl.PrefixedName.unapply(pn)
   }
 
   override val NamespaceLocal: NamespaceLocalApi = new NamespaceLocalApi {
@@ -313,3 +313,16 @@ trait WebOpsImpl extends WebOps with WebSingles with WebPairs with WebTriples {
 }
 
 object Web extends Web with WebOps with WebOpsImpl
+
+object Web2Web {
+  def apply[W1 <: Web with WebOps, W2 <: Web with WebOps](w1: W1, w2: W2) = new Object {
+    implicit def uri12: w1.Uri => w2.Uri = { case w1.Uri(uri) => w2.Uri(uri) }
+    implicit def namespace12: w1.Namespace => w2.Namespace = { case w1.Namespace(uri) => w2.Namespace(uri) }
+    implicit def prefix12: w1.Prefix => w2.Prefix = { case w1.Prefix(p) => w2.Prefix(p) }
+    implicit def localName12: w1.LocalName => w2.LocalName = { case w1.LocalName(ln) => w2.LocalName(ln) }
+    implicit def namespaceBinding12: w1.NamespaceBinding => w2.NamespaceBinding = { case w1.NamespaceBinding(ns, p) => w2.NamespaceBinding(ns, p) }
+    implicit def prefixedName12: w1.PrefixedName => w2.PrefixedName = { case w1.PrefixedName(p, l) => w2.PrefixedName(p, l) }
+    implicit def namespaceLocal12: w1.NamespaceLocal => w2.NamespaceLocal = { case w1.NamespaceLocal(n, l) => w2.NamespaceLocal(n, l) }
+    implicit def qname12: w1.QName => w2.QName = { case w1.QName(ns, ln, pfx) => w2.QName(ns, ln, pfx) }
+  }
+}
