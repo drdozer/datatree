@@ -21,7 +21,7 @@ trait RelationsOps {
   trait ZeroOneApi {
     def apply[T](ts: T*): ZeroOne[T]
 
-    def unapply[T](zo: ZeroOne[T]): Option[T]
+    def unapply[T](zo: ZeroOne[T]): Option[Option[T]]
   }
 
   implicit def zeroOneOps[T]: ZeroOneOps[T]
@@ -40,7 +40,7 @@ trait RelationsOps {
 
   trait OneApi {
     def apply[T](t: T*): One[T]
-    def unapply[T](o: One[T]): Option[T]
+    def unapply[T](o: One[T]): Option[Option[T]]
   }
 
   implicit def oneOps[T]: OneOps[T]
@@ -128,7 +128,7 @@ trait RelationsOpsScalaImpl extends RelationsOps {
 
 
   override val ZeroOne: ZeroOneApi = new ZeroOneApi {
-    override def unapply[T](zo: ZeroOne[T]) = zo
+    override def unapply[T](zo: ZeroOne[T]) = Some(zo)
 
     override def apply[T](ts: T*) = if(ts.length > 1)
       throw new IllegalArgumentException("Can only build a ZeroOne from zero or one elements, but given " + ts.length)
@@ -143,7 +143,7 @@ trait RelationsOpsScalaImpl extends RelationsOps {
   override val One: OneApi = new OneApi {
     override def apply[T](t: T*): One[T] = t.head
 
-    override def unapply[T](t: T): Option[T] = Some(t)
+    override def unapply[T](t: T) = Some(Some(t))
   }
 
   override implicit def oneOps[T]: OneOps[T] = new OneOps[T] {
@@ -193,3 +193,21 @@ trait RelationsOpsScalaImpl extends RelationsOps {
   }
 }
 
+object Relations2Relations {
+  def apply[R1 <: Relations with RelationsOps, R2 <: Relations with RelationsOps](r1: R1, r2: R2) = new Object {
+    implicit def zeroOne12[S, T](implicit st: S => T): r1.ZeroOne[S] => r2.ZeroOne[T] =
+    { case r1.ZeroOne(s) => r2.ZeroOne((s.toSeq map st) : _*)}
+
+    implicit def one12[S, T](implicit st: S => T): r1.One[S] => r2.One[T] =
+    { case r1.One(s) => r2.One((s.toSeq map st) : _*)}
+
+    implicit def zeroMany12[S, T](implicit st: S => T): r1.ZeroMany[S] => r2.ZeroMany[T] =
+    { case r1.ZeroMany(s) => r2.ZeroMany((s map st) : _*)}
+
+    implicit def oneMany12[S, T](implicit st: S => T): r1.OneMany[S] => r2.OneMany[T] =
+    { case r1.OneMany(s) => r2.OneMany((s map st) : _*)}
+
+    implicit def twoMany12[S, T](implicit st: S => T): r1.TwoMany[S] => r2.TwoMany[T] =
+    { case r1.TwoMany(s) => r2.TwoMany((s map st) : _*)}
+  }
+}
