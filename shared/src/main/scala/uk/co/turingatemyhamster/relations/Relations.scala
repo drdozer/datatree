@@ -19,8 +19,6 @@ trait RelationsOps {
   val ZeroOne : ZeroOneApi
 
   trait ZeroOneApi {
-    def apply[T](): ZeroOne[T]
-    def apply[T](t: T): ZeroOne[T]
     def apply[T](ts: T*): ZeroOne[T]
 
     def unapply[T](zo: ZeroOne[T]): Option[T]
@@ -41,8 +39,8 @@ trait RelationsOps {
   val One : OneApi
 
   trait OneApi {
-    def apply[T](t: T): One[T]
-    def unapply[T](t: T): Option[T]
+    def apply[T](t: T*): One[T]
+    def unapply[T](o: One[T]): Option[T]
   }
 
   implicit def oneOps[T]: OneOps[T]
@@ -130,11 +128,7 @@ trait RelationsOpsScalaImpl extends RelationsOps {
 
 
   override val ZeroOne: ZeroOneApi = new ZeroOneApi {
-    override def apply[T]() = None
-
     override def unapply[T](zo: ZeroOne[T]) = zo
-
-    override def apply[T](t: T) = Some(t)
 
     override def apply[T](ts: T*) = if(ts.length > 1)
       throw new IllegalArgumentException("Can only build a ZeroOne from zero or one elements, but given " + ts.length)
@@ -147,7 +141,7 @@ trait RelationsOpsScalaImpl extends RelationsOps {
   }
 
   override val One: OneApi = new OneApi {
-    override def apply[T](t: T): One[T] = t
+    override def apply[T](t: T*): One[T] = t.head
 
     override def unapply[T](t: T): Option[T] = Some(t)
   }
