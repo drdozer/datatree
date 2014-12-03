@@ -11,15 +11,16 @@ object DatatreeBuild extends Build{
 
   val logger = ConsoleLogger()
 
-  lazy val buildSettings: Seq[Setting[_]] = Seq(
+  lazy val buildSettings: Seq[Setting[_]] = bintrayPublishSettings ++ Seq(
     organization := "uk.co.turingatemyhamster",
     scalaVersion := "2.11.4",
     crossScalaVersions := Seq("2.11.4", "2.11.2"),
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
     version := "0.1.2",
     publishMavenStyle := true,
-    licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html"))
-  ) ++ bintrayPublishSettings
+    licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html")),
+    bintray.Keys.bintrayOrganization in bintray.Keys.bintray := None
+  )
 
   lazy val datatree            = module.project(datatreeJvm, datatreeJs)
   lazy val datatreeJvm         = module.jvmProject(datatreeSharedJvm)
