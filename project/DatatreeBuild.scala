@@ -4,6 +4,7 @@ import com.inthenow.sbt.scalajs._
 import com.inthenow.sbt.scalajs.SbtScalajs._
 import scala.scalajs.sbtplugin.ScalaJSPlugin._
 import ScalaJSKeys._
+import bintray.Plugin._
 
 object DatatreeBuild extends Build{
   val module = XModule(id = "datatree", defaultSettings = buildSettings)
@@ -16,8 +17,9 @@ object DatatreeBuild extends Build{
     crossScalaVersions := Seq("2.11.4", "2.11.2"),
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
     version := "0.1.2",
-    publishMavenStyle := false
-  )
+    publishMavenStyle := true,
+    licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html"))
+  ) ++ bintrayPublishSettings
 
   lazy val datatree            = module.project(datatreeJvm, datatreeJs)
   lazy val datatreeJvm         = module.jvmProject(datatreeSharedJvm)
