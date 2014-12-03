@@ -15,7 +15,8 @@ object DatatreeBuild extends Build{
     scalaVersion := "2.11.4",
     crossScalaVersions := Seq("2.11.4", "2.11.2"),
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
-    version := "0.1.1"
+    version := "0.1.2",
+    publishMavenStyle := false
   )
 
   lazy val datatree            = module.project(datatreeJvm, datatreeJs)
