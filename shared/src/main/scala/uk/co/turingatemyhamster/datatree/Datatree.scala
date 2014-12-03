@@ -19,7 +19,7 @@ abstract class Datatree extends Web with Relations {
   }
 
   trait Document extends WithBindings {
-    def identity: One[Uri]
+    def identity: ZeroOne[Uri]
     def `type`: One[QName]
     def properties: ZeroMany[NamedProperty]
   }
@@ -29,13 +29,13 @@ abstract class Datatree extends Web with Relations {
     extends WithBindings
 
   case class TopLevelDocument(bindings: ZeroMany[NamespaceBinding] = ZeroMany(),
-                              identity: One[Uri],
+                              identity: ZeroOne[Uri],
                               `type`: One[QName],
                               properties: ZeroMany[NamedProperty] = ZeroMany())
     extends Document
 
   case class NestedDocument(bindings: ZeroMany[NamespaceBinding] = ZeroMany(),
-                            identity: One[Uri],
+                            identity: ZeroOne[Uri],
                             `type`: One[QName],
                             properties: ZeroMany[NamedProperty] = ZeroMany())
     extends Document with PropertyValue

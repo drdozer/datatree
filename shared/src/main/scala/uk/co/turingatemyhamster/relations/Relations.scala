@@ -19,6 +19,8 @@ trait RelationsOps {
   val ZeroOne : ZeroOneApi
 
   trait ZeroOneApi {
+    def fromOption[T](ot: Option[T]): ZeroOne[T]
+
     def apply[T](ts: T*): ZeroOne[T]
 
     def unapply[T](zo: ZeroOne[T]): Option[Option[T]]
@@ -128,6 +130,8 @@ trait RelationsOpsScalaImpl extends RelationsOps {
 
 
   override val ZeroOne: ZeroOneApi = new ZeroOneApi {
+    override def fromOption[T](ot: Option[T]) = ot
+
     override def unapply[T](zo: ZeroOne[T]) = Some(zo)
 
     override def apply[T](ts: T*) = if(ts.length > 1)

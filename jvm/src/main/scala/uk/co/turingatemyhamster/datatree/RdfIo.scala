@@ -200,10 +200,9 @@ trait RdfIo extends Datatree {
           properties
       }
 
-      def document(implicit reader: XMLStreamReader): (ZeroMany[NamespaceBinding], One[Uri], One[QName], ZeroMany[NamedProperty]) =
+      def document(implicit reader: XMLStreamReader): (ZeroMany[NamespaceBinding], ZeroOne[Uri], One[QName], ZeroMany[NamedProperty]) =
       reader.parseElement { (qname, bindings, attrs) =>
-        val id = One(Uri(attrs.getOrElse(rdf_about,
-          throw new IllegalStateException("Expecting rdf:about at " + reader.getName + " searching with " + rdf_about))))
+        val id = ZeroOne.fromOption(attrs get rdf_about map (Uri apply))
         val ps = properties
         (bindings, id, One(qname), ps)
       }
@@ -282,7 +281,7 @@ trait RdfIo extends Datatree {
       def document(doc: Document)(implicit writer: XMLStreamWriter): Unit = {
         writer.writeStartElement(doc.`type`.theOne : QName)
         bindings(doc.bindings.seq)
-        writer.writeAttribute(rdf_about : QName, doc.identity.theOne)
+        for(id <- doc.identity.seq) writer.writeAttribute(rdf_about : QName, id)
         properties(doc.properties.seq)
         writer.writeEndElement()
       }

@@ -19,7 +19,7 @@ object RdfTest {
       documents = Vector(
         TopLevelDocument(
           bindings = Vector(),
-          identity = testSpace uri "tld1",
+          identity = Some(testSpace uri "tld1"),
           `type` = sbol2 qName "Model",
           properties = Vector(
             NamedProperty(name = sbol2 qName "language", propertyValue = StringLiteral("SBML")),
@@ -27,7 +27,7 @@ object RdfTest {
             NamedProperty(name = sbol2 qName "role", propertyValue = UriLiteral(sbo.uri("0000062"))),
             NamedProperty(name = testSpace qName "iMadeThis", propertyValue = NestedDocument(
               bindings = Vector(),
-              identity = testSpace uri "unicorn1",
+              identity = Some(testSpace uri "unicorn1"),
               `type` = testSpace qName "unicorn",
               properties = Vector(
                 NamedProperty(name = testSpace qName "status", propertyValue = StringLiteral("endangered"))
