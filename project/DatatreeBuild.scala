@@ -14,7 +14,7 @@ object DatatreeBuild extends Build{
   lazy val buildSettings: Seq[Setting[_]] = bintrayPublishSettings ++ Seq(
     organization := "uk.co.turingatemyhamster",
     scalaVersion := "2.11.4",
-    crossScalaVersions := Seq("2.11.4", "2.11.2"),
+    crossScalaVersions := Seq("2.11.4", "2.10.4"),
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
     version := "0.1.2",
     publishMavenStyle := true,
@@ -23,8 +23,14 @@ object DatatreeBuild extends Build{
   )
 
   lazy val datatree             = module.project(datatreePlatformJvm, datatreePlatformJs)
-  lazy val datatreePlatformJvm  = module.jvmProject(datatreeSharedJvm)
+  lazy val datatreePlatformJvm  = module.jvmProject(datatreeSharedJvm).settings(platformJvmSettings : _*)
   lazy val datatreePlatformJs   = module.jsProject(datatreeSharedJs)
   lazy val datatreeSharedJvm    = module.jvmShared()
   lazy val datatreeSharedJs     = module.jsShared(datatreeSharedJvm)
+
+  lazy val platformJvmSettings = Seq(
+    libraryDependencies ++= Seq(
+      "org.scalacheck" %% "scalacheck" % "1.12.1" % "test"
+    )
+  )
 }
