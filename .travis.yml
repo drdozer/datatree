@@ -4,9 +4,6 @@ scala:
 jdk:
 - oraclejdk8
 - oraclejdk7
-script:
-- sbt scoverage:test
-- sbt coveralls
 env:
   global:
   - secure: VmcTMBezyi6b8b3W+tED7ptBZrXrT4nNpghyf9geajI55fpd/GAOtjeAYzl4zUhKUHX26BAj4bjsg9n9DRJ4My/ElPi/UyU7Q6zm+17ZknmPjf3qsnb4oXSgSqh2NBOx4+vHDgjuFz+su+BOyLzSghXEkihGb4QWgpkrXs/Fod8=
