@@ -22,9 +22,9 @@ object DatatreeBuild extends Build{
     bintray.Keys.bintrayOrganization in bintray.Keys.bintray := None
   )
 
-  lazy val datatree            = module.project(datatreeJvm, datatreeJs)
-  lazy val datatreeJvm         = module.jvmProject(datatreeSharedJvm)
-  lazy val datatreeJs          = module.jsProject(datatreeSharedJs)
-  lazy val datatreeSharedJvm   = module.jvmShared()
-  lazy val datatreeSharedJs    = module.jsShared(datatreeSharedJvm)
+  lazy val datatree             = module.project(datatreePlatformJvm, datatreePlatformJs)
+  lazy val datatreePlatformJvm  = module.jvmProject(datatreeSharedJvm)
+  lazy val datatreePlatformJs   = module.jsProject(datatreeSharedJs)
+  lazy val datatreeSharedJvm    = module.jvmShared()
+  lazy val datatreeSharedJs     = module.jsShared(datatreeSharedJvm)
 }
