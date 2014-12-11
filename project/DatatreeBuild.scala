@@ -26,16 +26,22 @@ object DatatreeBuild extends Build{
       else
         s"$branch-$baseVersion"
     },
-    publishMavenStyle := true,
-    licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html")),
-    bintray.Keys.bintrayOrganization in bintray.Keys.bintray := None
+    publishMavenStyle := false,
+    licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html"))
   )
 
   lazy val datatree             = module.project(datatreePlatformJvm, datatreePlatformJs)
-  lazy val datatreePlatformJvm  = module.jvmProject(datatreeSharedJvm).settings(platformJvmSettings : _*)
-  lazy val datatreePlatformJs   = module.jsProject(datatreeSharedJs)
-  lazy val datatreeSharedJvm    = module.jvmShared()
-  lazy val datatreeSharedJs     = module.jsShared(datatreeSharedJvm)
+  lazy val datatreePlatformJvm  = module.jvmProject(datatreeSharedJvm).
+      settings(platformSettings : _*).settings(platformJvmSettings : _*)
+  lazy val datatreePlatformJs   = module.jsProject(datatreeSharedJs).
+      settings(platformSettings : _*)
+  lazy val datatreeSharedJvm    = module.jvmShared().
+        settings(sharedSettings : _*)
+  lazy val datatreeSharedJs     = module.jsShared(datatreeSharedJvm).
+          settings(sharedSettings : _*)
+
+  lazy val platformSettings = Seq(description := "Datatree platform-specific API")
+  lazy val sharedSettings = Seq(description := "Datatree cross-platform API")
 
   lazy val platformJvmSettings = Seq(
     libraryDependencies ++= Seq(
