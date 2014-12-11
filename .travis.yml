@@ -14,10 +14,8 @@ after_success:
       test "${TRAVIS_PULL_REQUEST}" = 'false' &&
       test "${TRAVIS_JDK_VERSION}" = 'oraclejdk7' &&
       test "${TRAVIS_BRANCH}" = 'main' &&
-      sbt 'set credentials += Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", System.getenv("SONATYPE_USER"), System.getenv("SONATYPE_PASS"))' publish
- - >
+      sbt 'set credentials += Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", System.getenv("SONATYPE_USER"), System.getenv("SONATYPE_PASS"))' publish;
       test "${TRAVIS_PULL_REQUEST}" = 'false' &&
       test "${TRAVIS_JDK_VERSION}" = 'oraclejdk7' &&
       test "${TRAVIS_BRANCH}" != 'main' &&
       sbt 'set credentials += Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", System.getenv("SONATYPE_USER"), System.getenv("SONATYPE_PASS")); set version := version.value + "." + System.getenv("TRAVIS_BUILD_NUMBER")' publish
-      
