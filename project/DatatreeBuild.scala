@@ -12,7 +12,9 @@ object DatatreeBuild extends Build{
 
   val logger = ConsoleLogger()
 
-  val branch = fetchGitBranch()
+  logger.info("Java environment:")
+  logger.info(System.getenv.toString)
+
   val baseVersion = "0.1.2"
 
   lazy val buildSettings: Seq[Setting[_]] = bintrayPublishSettings ++ Seq(
@@ -20,12 +22,7 @@ object DatatreeBuild extends Build{
     scalaVersion := "2.11.4",
     crossScalaVersions := Seq("2.11.4", "2.10.4"),
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
-    version := {
-      if(branch == "main")
-        baseVersion
-      else
-        s"$branch-$baseVersion"
-    },
+    version := makeVersion(baseVersion),
     publishMavenStyle := false,
     licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html"))
   )
@@ -53,9 +50,24 @@ object DatatreeBuild extends Build{
     val builder = new RepositoryBuilder()
     builder.setGitDir(file(".git"))
     val repo = builder.readEnvironment().findGitDir().build()
-    val branch = repo.getBranch
-    logger.info(s"Git branch reported as: $branch")
+    val gitBranch = repo.getBranch
+    logger.info(s"Git branch reported as: $gitBranch")
     repo.close()
-    branch
+    val travisBranch = Option(System.getenv("TRAVIS_BRANCH"))
+    logger.info(s"Travis branch reported as: $travisBranch")
+
+    travisBranch getOrElse gitBranch
+  }
+
+  def makeVersion(baseVersion: String): String = {
+    val branch = fetchGitBranch()
+    if(branch == "main") {
+      baseVersion
+    } else {
+      val tjn = Option(System.getenv("TRAVIS_JOB_NUMBER"))
+      s"$branch-$baseVersion${
+        tjn.map("." + _) getOrElse ""
+      }"
+    }
   }
 }
