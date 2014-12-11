@@ -10,13 +10,12 @@ env:
   - secure: RATtTAWYDaViXy/Xj3Te3dcf33vNVxtZygms7fF3uBjfWElu9LSG+ZP8X3Tw+WeRImfOJkiTwN8QecQoNGsC/De1qJpUVHTnQwqRdRqA9yGGTE17NMcyD01hntzgviX/uuDxEqB0CTsZbZKp3okZMcRUaBNykTgd420eIpPdokE=
 after_success:
   - >
+      sh "$TRAVIS_BUILD_DIR/.travis.credentials.sh";
       test "${TRAVIS_PULL_REQUEST}" = 'false' &&
       test "${TRAVIS_JDK_VERSION}" = 'oraclejdk7' &&
       test "${TRAVIS_BRANCH}" = 'main' &&
-      sh "$TRAVIS_BUILD_DIR/.travis.credentials.sh" &&
       sbt publish;
       test "${TRAVIS_PULL_REQUEST}" = 'false' &&
       test "${TRAVIS_JDK_VERSION}" = 'oraclejdk7' &&
       test "${TRAVIS_BRANCH}" != 'main' &&
-      sh "$TRAVIS_BUILD_DIR/.travis.credentials.sh" &&
       sbt 'set version := version.value + "." + System.getenv("TRAVIS_BUILD_NUMBER")' publish
