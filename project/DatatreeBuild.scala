@@ -54,6 +54,7 @@ object DatatreeBuild extends Build{
     builder.setGitDir(file(".git"))
     val repo = builder.readEnvironment().findGitDir().build()
     val branch = repo.getBranch
+    logger.info(s"Git branch reported as: $branch")
     repo.close()
     branch
   }
