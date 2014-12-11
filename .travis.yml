@@ -12,7 +12,7 @@ after_success:
   - >
       sh "$TRAVIS_BUILD_DIR/.travis.credentials.sh";
       echo "Branch: " ${TRAVIS_BRANCH};
-      echo "Build: " + ${TRAVIS_BUILD_NUMBER};
+      echo "Build: " + ${TRAVIS_JOB_NUMBER};
       echo "Environment:";
       env;
       test "${TRAVIS_PULL_REQUEST}" = 'false' &&
@@ -22,4 +22,4 @@ after_success:
       test "${TRAVIS_PULL_REQUEST}" = 'false' &&
       test "${TRAVIS_JDK_VERSION}" = 'oraclejdk7' &&
       test "${TRAVIS_BRANCH}" != 'main' &&
-      sbt 'set version := version.value + "." + System.getenv("TRAVIS_BUILD_NUMBER")' publish
+      sbt 'set version := version.value + "." + System.getenv("TRAVIS_JOB_NUMBER")' publish
