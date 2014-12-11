@@ -11,6 +11,10 @@ env:
 after_success:
   - >
       sh "$TRAVIS_BUILD_DIR/.travis.credentials.sh";
+      echo "Branch: " ${TRAVIS_BRANCH};
+      echo "Build: " + ${TRAVIS_BUILD_NUMBER};
+      echo "Environment:";
+      env;
       test "${TRAVIS_PULL_REQUEST}" = 'false' &&
       test "${TRAVIS_JDK_VERSION}" = 'oraclejdk7' &&
       test "${TRAVIS_BRANCH}" = 'main' &&
