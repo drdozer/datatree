@@ -22,8 +22,8 @@ object DatatreeBuild extends Build {
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
     organization := "uk.co.turingatemyhamster",
     version := makeVersion(baseVersion),
-    publishMavenStyle := false,
-    repository in bintray := "turingatemhyamster",
+    publishMavenStyle := true,
+    repository in bintray := "maven",
     bintrayOrganization in bintray := None,
     licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html"))
   )
