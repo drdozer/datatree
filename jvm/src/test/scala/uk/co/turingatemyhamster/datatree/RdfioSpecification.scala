@@ -109,15 +109,16 @@ object RdfioSpecification extends Properties("RdfIO") {
       identity <- arbitrary[One[Uri]]
       tpe <- nestedBindings.genName
       properties <- Gen.listOf(nestedBindings.genNamedProperty(sz))
-    } yield NestedDocument(bindings, identity, tpe, properties)
+    } yield NestedDocument(bindings, Some(identity), tpe, properties)
 
     implicit def genTopLevelDocument(bs: Seq[NamespaceBinding] = Seq()): Gen[TopLevelDocument] = for {
       bindings <- Gen.listOfN(2, arbitrary[NamespaceBinding]).map(_.to[Vector].toSeq ++ bs)
       nestedBindings = new NamespaceBindings(nsBindings ++ bindings)
       identity <- arbitrary[One[Uri]]
       tpe <- arbitrary[One[QName]]
-      properties <- Gen.listOf(nestedBindings.genNamedProperty(2))
-    } yield TopLevelDocument(bindings, identity, tpe, properties)
+      childCount <- Gen.chooseNum(0, 5)
+      properties <- Gen.listOfN(childCount, nestedBindings.genNamedProperty(2))
+    } yield TopLevelDocument(bindings, Some(identity), tpe, properties)
 
     implicit val arbTopLevelDocument = Arbitrary { genTopLevelDocument() }
   }

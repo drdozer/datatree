@@ -6,6 +6,10 @@ resolvers += Resolver.url(
   url("http://dl.bintray.com/content/sbt/sbt-plugin-releases"))(
   Resolver.ivyStylePatterns)
 
+libraryDependencies ++= Seq(
+  "org.eclipse.jgit" % "org.eclipse.jgit" % "3.0.0.201306101825-r"
+)
+
 resolvers += Classpaths.sbtPluginReleases
 
 resolvers += Classpaths.typesafeReleases
