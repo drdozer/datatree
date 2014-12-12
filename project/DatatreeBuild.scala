@@ -7,9 +7,7 @@ import ScalaJSKeys._
 import bintray.Plugin._
 import org.eclipse.jgit.lib._
 
-object DatatreeBuild extends Build{
-  val module = XModule(id = "datatree", defaultSettings = buildSettings)
-
+object DatatreeBuild extends Build {
   val logger = ConsoleLogger()
 
   logger.info("Java environment:")
@@ -18,16 +16,18 @@ object DatatreeBuild extends Build{
   val baseVersion = "0.1.2"
 
   lazy val buildSettings: Seq[Setting[_]] = bintrayPublishSettings ++ Seq(
-    organization := "uk.co.turingatemyhamster",
     scalaVersion := "2.11.4",
     crossScalaVersions := Seq("2.11.4", "2.10.4"),
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
+    organization := "uk.co.turingatemyhamster",
     version := makeVersion(baseVersion),
     publishMavenStyle := false,
 //    bintray.Keys.repository in bintray.Keys.bintray := "sbt-plugins",
     bintray.Keys.bintrayOrganization in bintray.Keys.bintray := None,
     licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html"))
   )
+
+  val module = XModule(id = "datatree", defaultSettings = buildSettings)
 
   lazy val datatree             = module.project(datatreePlatformJvm, datatreePlatformJs)
   lazy val datatreePlatformJvm  = module.jvmProject(datatreeSharedJvm).
@@ -58,12 +58,14 @@ object DatatreeBuild extends Build{
     val travisBranch = Option(System.getenv("TRAVIS_BRANCH"))
     logger.info(s"Travis branch reported as: $travisBranch")
 
-    travisBranch getOrElse gitBranch
+    val branch = (travisBranch getOrElse gitBranch) replaceAll ("/", "_")
+    logger.info(s"Computed branch is $branch")
+    branch
   }
 
   def makeVersion(baseVersion: String): String = {
     val branch = fetchGitBranch()
-    if(branch == "main") {
+    if(branch == "master") {
       baseVersion
     } else {
       val tjn = Option(System.getenv("TRAVIS_JOB_NUMBER"))
