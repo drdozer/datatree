@@ -5,6 +5,7 @@ import com.inthenow.sbt.scalajs.SbtScalajs._
 import scala.scalajs.sbtplugin.ScalaJSPlugin._
 import ScalaJSKeys._
 import bintray.Plugin._
+import bintray.Keys._
 import org.eclipse.jgit.lib._
 
 object DatatreeBuild extends Build {
@@ -22,8 +23,8 @@ object DatatreeBuild extends Build {
     organization := "uk.co.turingatemyhamster",
     version := makeVersion(baseVersion),
     publishMavenStyle := false,
-//    bintray.Keys.repository in bintray.Keys.bintray := "sbt-plugins",
-    bintray.Keys.bintrayOrganization in bintray.Keys.bintray := None,
+    repository in bintray := "turingatemhyamster",
+    bintrayOrganization in bintray := None,
     licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html"))
   )
 
