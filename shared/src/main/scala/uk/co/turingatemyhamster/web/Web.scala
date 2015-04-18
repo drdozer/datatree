@@ -1,4 +1,7 @@
-package uk.co.turingatemyhamster.web
+package uk.co.turingatemyhamster
+package web
+
+import typeclass._
 
 /**
  *
@@ -21,308 +24,50 @@ trait Web {
 
 }
 
-trait WebOps {
-  importedPackages : Web =>
-  
-  val Uri : UriApi
+//object Web2Web {
+//
+//  def ops[W1 <: Web : WebDSL, W2 <: Web : WebDSL]: Web2Web[W1, W2] =
+//    new Web2Web[W1, W2] {
+//      override final val w1Ops: WebDSL[W1] = implicitly[WebDSL[W1]]
+//      override final val w2Ops: WebDSL[W2] = implicitly[WebDSL[W2]]
+//    }
+//}
 
-  trait UriApi {
-    def apply(uri: String): Uri
-    def unapply(uri: Uri): Option[String]
-  }
-
-  val Namespace : NamespaceApi
-  
-  trait NamespaceApi {
-    def apply(uri: Uri): Namespace
-    def unapply(ns: Namespace): Option[Uri]
-  }
-  
-  val LocalName : LocalNameApi
-  
-  trait LocalNameApi {
-    def apply(localName: String): LocalName
-    def unapply(ln: LocalName): Option[String]
-  }
-  
-  val Prefix : PrefixApi
-  
-  trait PrefixApi {
-    def apply(prefix: String): Prefix
-    def unapply(px: Prefix): Option[String]
-  }
-
-  val NamespaceBinding : NamespaceBindingApi
-  
-  trait NamespaceBindingApi {
-    def apply(namespace: Namespace, prefix: Prefix): NamespaceBinding
-    def unapply(nb: NamespaceBinding): Option[(Namespace, Prefix)]
-  }
-
-  val PrefixedName : PrefixedNameApi
-  
-  trait PrefixedNameApi {
-    def apply(prefix: Prefix, localName: LocalName): PrefixedName
-    def unapply(pn: PrefixedName): Option[(Prefix, LocalName)]
-  }
-  
-  val NamespaceLocal : NamespaceLocalApi
-  
-  trait NamespaceLocalApi {
-    def apply(namespace: Namespace, localName: LocalName): NamespaceLocal
-    def unapply(nl: NamespaceLocal): Option[(Namespace, LocalName)]
-  }
-
-  val QName : QNameApi
-    
-  trait QNameApi {
-    def apply(namespace: Namespace, localName: LocalName, prefix: Prefix): QName
-    def unapply(qn: QName): Option[(Namespace, LocalName, Prefix)] 
-  }
-
-  implicit def uriOps: UriOps
-  
-  trait UriOps {
-    def uriString(uri: Uri): String
-    def extendWith(uri: Uri, part: String): Uri
-  }
-  
-  implicit class UriSyntax(val _uri: Uri)(implicit val ops: UriOps) {
-    def raw = ops.uriString(_uri)
-    def extendWith(part: String) = ops.extendWith(_uri, part)
-  }
-  
-  implicit def namespaceOps: NamespaceOps
-  
-  trait NamespaceOps {
-    def uri(ns: Namespace): Uri
-  }
-  
-  implicit class NamespaceSyntax(val _ns: Namespace)(implicit ops: NamespaceOps) {
-    def nsWithPrefix(pfx: Prefix) = NamespaceBinding(_ns, pfx)
-    def nsWithLocal(ln: LocalName) = NamespaceLocal(_ns, ln)
-    def uri = ops.uri(_ns)
-  }
-  
-  implicit def localNameOps: LocalNameOps
-  
-  trait LocalNameOps {
-    def raw(ln: LocalName): String
-  }
-  
-  implicit class LocalNameSyntax(val _ln: LocalName)(implicit ops: LocalNameOps) {
-    def raw = ops.raw(_ln)
-  }
-  
-  implicit def prefixOps: PrefixOps
-  
-  trait PrefixOps {
-    def raw(pfx: Prefix): String
-  }
-  
-  implicit class PrefixSyntax(val _pfx: Prefix)(implicit ops: PrefixOps) {
-    def prefixedName(ln: LocalName) = PrefixedName(_pfx, ln)
-    def raw = ops.raw(_pfx)
-  }
-
-  implicit def namespaceBindingOps: NamespaceBindingOps
-
-  trait NamespaceBindingOps {
-    def namespace(nb: NamespaceBinding): Namespace
-    def prefix(nb: NamespaceBinding): Prefix
-  }
-
-  implicit class NamespaceBindingSyntax(val _nb: NamespaceBinding)(implicit ops: NamespaceBindingOps) {
-    def withLocal(ln: LocalName): QName = QName(namespace, ln, prefix)
-    def namespace: Namespace = ops.namespace(_nb)
-    def prefix: Prefix = ops.prefix(_nb)
-    def namespaceLocal(ln: LocalName): NamespaceLocal = NamespaceLocal(ops.namespace(_nb), ln)
-    def prefixedName(ln: LocalName): PrefixedName = PrefixedName(ops.prefix(_nb), ln)
-    def qName(ln: LocalName): QName = QName(ops.namespace(_nb), ln, ops.prefix(_nb))
-    def qName(ln: String): QName = qName(LocalName(ln))
-    def uri(localName: String): Uri = namespaceLocal(LocalName(localName)).asUri
-  }
-
-  implicit def prefixNameOps: PrefixedNameOps
-
-  trait PrefixedNameOps {
-    def prefix(pn: PrefixedName): Prefix
-    def localName(pn: PrefixedName): LocalName
-  }
-
-  implicit class PrefixedNameSyntax(val _pn: PrefixedName)(implicit ops: PrefixedNameOps) {
-    def prefix = ops.prefix(_pn)
-    def localName = ops.localName(_pn)
-  }
-
-  implicit def namespaceLocalOps: NamespaceLocalOps
-
-  trait NamespaceLocalOps {
-    def namespace(nl: NamespaceLocal): Namespace
-    def localName(nl: NamespaceLocal): LocalName
-  }
-
-  implicit class NamespaceLocalSyntax(val _nl: NamespaceLocal)(implicit ops: NamespaceLocalOps) {
-    def namespace = ops.namespace(_nl)
-    def localName = ops.localName(_nl)
-    def asUri = namespace.uri.extendWith(localName.raw)
-  }
-
-  implicit def qnameOps: QNameOps
-
-  trait QNameOps {
-    def namespace(qn: QName): Namespace
-    def localName(qn: QName): LocalName
-    def prefix(qn: QName): Prefix
-  }
-
-  implicit class QNameSyntax(val _qn: QName)(implicit ops: QNameOps) {
-    def namespace = ops.namespace(_qn)
-    def localName = ops.localName(_qn)
-    def prefix = ops.prefix(_qn)
-  }
-}
-
-trait WebSingles {
-  importedPackages : Web with WebOps =>
-  override type Uri = SinglesImpl.Uri
-  override type Namespace = SinglesImpl.Namespace
-  override type Prefix = SinglesImpl.Prefix
-  override type LocalName = SinglesImpl.LocalName
-
-
-  override val Uri: UriApi = new UriApi {
-    override def apply(uri: String) = SinglesImpl.Uri.apply(uri)
-    override def unapply(uri: Uri) = SinglesImpl.Uri.unapply(uri)
-  }
-
-
-  override implicit def uriOps = new UriOps {
-    override def uriString(uri: Uri) = uri.uriString
-    override def extendWith(uri: Uri, part: String) = Uri(uri.uriString + part)
-  }
-
-  override val Namespace: NamespaceApi = new NamespaceApi {
-    override def apply(uri: Uri) = SinglesImpl.Namespace.apply(uri)
-    override def unapply(ns: Namespace) = SinglesImpl.Namespace.unapply(ns)
-  }
-
-  override implicit def namespaceOps = new NamespaceOps {
-    override def uri(ns: Namespace) = ns.ns
-  }
-
-  override val Prefix: PrefixApi = new PrefixApi {
-    override def apply(prefix: String) = SinglesImpl.Prefix.apply(prefix)
-    override def unapply(px: Prefix) = SinglesImpl.Prefix.unapply(px)
-  }
-
-
-  override val LocalName: LocalNameApi = new LocalNameApi {
-    override def apply(localName: String) = SinglesImpl.LocalName.apply(localName)
-    override def unapply(ln: LocalName) = SinglesImpl.LocalName.unapply(ln)
-  }
-
-
-  override implicit def localNameOps = new LocalNameOps {
-    override def raw(ln: LocalName) = ln.ln
-  }
-
-  override implicit def prefixOps = new PrefixOps {
-    override def raw(pfx: Prefix) = pfx.pfx
-  }
-
-  object SinglesImpl {
-    case class Uri(uriString: String)
-    case class Namespace(ns: Uri)
-    case class Prefix(pfx: String)
-    case class LocalName(ln: String)
-  }
-}
-
-trait WebPairs {
-  importedPackages : Web with WebOps =>
-
-  override type PrefixedName = PairsImpl.PrefixedName
-  override type NamespaceBinding = PairsImpl.NamespaceBinding
-  override type NamespaceLocal = PairsImpl.NamespaceLocal
-
-  override val NamespaceBinding: NamespaceBindingApi = new NamespaceBindingApi {
-    override def apply(namespace: Namespace, prefix: Prefix) = PairsImpl.NamespaceBinding(namespace, prefix)
-    override def unapply(nb: NamespaceBinding) = PairsImpl.NamespaceBinding.unapply(nb)
-  }
-
-  override val PrefixedName: PrefixedNameApi = new PrefixedNameApi {
-    override def apply(prefix: Prefix, localName: LocalName) = PairsImpl.PrefixedName.apply(prefix, localName)
-    override def unapply(pn: PrefixedName) = PairsImpl.PrefixedName.unapply(pn)
-  }
-
-  override val NamespaceLocal: NamespaceLocalApi = new NamespaceLocalApi {
-    override def apply(namespace: Namespace, localName: LocalName) = PairsImpl.NamespaceLocal(namespace, localName)
-    override def unapply(nl: NamespaceLocal) = PairsImpl.NamespaceLocal.unapply(nl)
-  }
-
-  override implicit val namespaceBindingOps = new NamespaceBindingOps {
-    override def namespace(nb: NamespaceBinding) = nb.namespace
-    override def prefix(nb: NamespaceBinding) = nb.prefix
-  }
-
-  override implicit val prefixNameOps = new PrefixedNameOps {
-    override def prefix(pn: PrefixedName) = pn.prefix
-    override def localName(pn: PrefixedName) = pn.localName
-  }
-
-  override implicit val namespaceLocalOps = new NamespaceLocalOps {
-    override def namespace(nl: NamespaceLocal) = nl.namespace
-    override def localName(nl: NamespaceLocal) = nl.localName
-  }
-
-  object PairsImpl {
-    case class PrefixedName(prefix: Prefix, localName: LocalName)
-    case class NamespaceBinding(namespace: Namespace, prefix: Prefix)
-    case class NamespaceLocal(namespace: Namespace, localName: LocalName)
-  }
-}
-
-trait WebTriples {
-  importedPackages : Web with WebOps =>
-
-  override type QName = TriplesImpl.QName
-
-  override val QName: QNameApi = new QNameApi {
-    override def apply(namespace: Namespace, localName: LocalName, prefix: Prefix) =
-      TriplesImpl.QName.apply(namespace, localName, prefix)
-
-    override def unapply(qn: QName) =
-      TriplesImpl.QName.unapply(qn)
-  }
-
-
-  override implicit def qnameOps = new QNameOps {
-    override def namespace(qn: QName) = qn.namespace
-    override def prefix(qn: QName) = qn.prefix
-    override def localName(qn: QName) = qn.localName
-  }
-
-  object TriplesImpl {
-    case class QName(namespace: Namespace, localName: LocalName, prefix: Prefix)
-  }
-}
-
-trait WebOpsImpl extends WebOps with WebSingles with WebPairs with WebTriples {
-  importedPackages : Web =>
-}
-
-object Web extends Web with WebOps with WebOpsImpl
-
-object Web2Web {
-  def apply[W1 <: Web with WebOps, W2 <: Web with WebOps](w1: W1, w2: W2) = new Object {
-    implicit def uri12: w1.Uri => w2.Uri = { case w1.Uri(uri) => w2.Uri(uri) }
-    implicit def namespace12: w1.Namespace => w2.Namespace = { case w1.Namespace(uri) => w2.Namespace(uri) }
-    implicit def prefix12: w1.Prefix => w2.Prefix = { case w1.Prefix(p) => w2.Prefix(p) }
-    implicit def localName12: w1.LocalName => w2.LocalName = { case w1.LocalName(ln) => w2.LocalName(ln) }
-    implicit def namespaceBinding12: w1.NamespaceBinding => w2.NamespaceBinding = { case w1.NamespaceBinding(ns, p) => w2.NamespaceBinding(ns, p) }
-    implicit def prefixedName12: w1.PrefixedName => w2.PrefixedName = { case w1.PrefixedName(p, l) => w2.PrefixedName(p, l) }
-    implicit def namespaceLocal12: w1.NamespaceLocal => w2.NamespaceLocal = { case w1.NamespaceLocal(n, l) => w2.NamespaceLocal(n, l) }
-    implicit def qname12: w1.QName => w2.QName = { case w1.QName(ns, ln, pfx) => w2.QName(ns, ln, pfx) }
-  }
-}
+//trait Web2Web[W1 <: Web, W2 <: Web] {
+//  val w1Ops: WebDSL[W1]
+//  val w2Ops: WebDSL[W2]
+//
+//  import w2Ops._
+//
+//  implicitly[Constructor1[W2#Uri, String]]
+//  implicitly[Constructor1[W2#Namespace, W2#Uri]]
+//  implicitly[ConstructorChain[String, W2#Uri]]
+//  implicitly[ConstructorChain[W2#Uri, W2#Namespace]]
+//  implicitly[ConstructorChain[String, W2#Namespace]]
+//
+//  implicit val uri12: Constructor1[W2#Uri, W1#Uri] = new Constructor1[W2#Uri, W1#Uri] {
+//    override def apply(a: W1#Uri) = a match { case w1Ops.Uri(value) => w2Ops.Uri(value) }
+//  }
+//  implicit val namespace12: Constructor1[W2#Namespace, W1#Namespace] = new Constructor1[W2#Namespace, W1#Namespace] {
+//    override def apply(a: W1#Namespace) = a match { case w1Ops.Namespace(uri) => w2Ops.Namespace(uri) }
+//  }
+//  implicit val prefix12: Constructor1[W2#Prefix, W1#Prefix] = new Constructor1[W2#Prefix, W1#Prefix] {
+//    override def apply(a: W1#Prefix) = a match { case w1Ops.Prefix(p) => w2Ops.Prefix(p) }
+//  }
+//  implicit val localName12: Constructor1[W2#LocalName, W1#LocalName] = new Constructor1[W2#LocalName, W1#LocalName] {
+//    override def apply(a: W1#LocalName) = a match { case w1Ops.LocalName(ln) => w2Ops.LocalName(ln) }
+//  }
+//  implicit val namespaceBinding12: Constructor1[W2#NamespaceBinding, W1#NamespaceBinding] = new Constructor1[W2#NamespaceBinding, W1#NamespaceBinding]{
+//    override def apply(a: W1#NamespaceBinding) = a match { case w1Ops.NamespaceBinding(ns, p) => w2Ops.NamespaceBinding(ns, p) }
+//  }
+//  implicit val prefixedName12: Constructor1[W2#PrefixedName, W1#PrefixedName] = new Constructor1[W2#PrefixedName, W1#PrefixedName] {
+//    override def apply(a: W1#PrefixedName) = a match { case w1Ops.PrefixedName(p, l) => w2Ops.PrefixedName(p, l) }
+//  }
+//  implicit val namespaceLocal12: Constructor1[W2#NamespaceLocal, W1#NamespaceLocal] = new Constructor1[W2#NamespaceLocal, W1#NamespaceLocal]{
+//    override def apply(a: W1#NamespaceLocal) = a match { case w1Ops.NamespaceLocal(n, l) => w2Ops.NamespaceLocal(n, l) }
+//  }
+//  implicit val qname12: Constructor1[W2#QName, W1#QName] = new Constructor1[W2#QName, W1#QName] {
+//    override def apply(a: W1#QName) = a match { case w1Ops.QName(ns, ln, pfx) => w2Ops.QName(ns, ln, pfx) }
+//  }
+//
+//}

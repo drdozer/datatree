@@ -14,10 +14,11 @@ object DatatreeBuild extends Build {
   logger.info("Java environment:")
   logger.info(System.getenv.toString)
 
-  val baseVersion = "0.1.2"
+  val baseVersion = "0.1.3"
 
   lazy val buildSettings: Seq[Setting[_]] = bintrayPublishSettings ++ Seq(
-    scalaVersion := "2.11.4",
+//    scalacOptions ++= Seq("-Xlog-implicits"),
+    scalaVersion := "2.11.5",
     crossScalaVersions := Seq("2.11.4", "2.10.4"),
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
     organization := "uk.co.turingatemyhamster",
@@ -25,7 +26,8 @@ object DatatreeBuild extends Build {
     publishMavenStyle := true,
     repository in bintray := "maven",
     bintrayOrganization in bintray := None,
-    licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html"))
+    licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html")),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
   )
 
   val module = XModule(id = "datatree", defaultSettings = buildSettings)
@@ -41,10 +43,15 @@ object DatatreeBuild extends Build {
           settings(sharedSettings : _*)
 
   lazy val platformSettings = Seq(description := "Datatree platform-specific API")
-  lazy val sharedSettings = Seq(description := "Datatree cross-platform API")
+  lazy val sharedSettings = Seq(
+    description := "Datatree cross-platform API",
+    libraryDependencies += "com.github.mpilquist" %% "simulacrum" % "0.3.0"
+  )
 
   lazy val platformJvmSettings = Seq(
     libraryDependencies ++= Seq(
+      "org.spire-math" %% "jawn-ast" % "0.7.2",
+      "uk.co.turingatemyhamster" %% "gv-core" % "develop-0.3.3",
       "org.scalacheck" %% "scalacheck" % "1.12.1" % "test"
     )
   )
