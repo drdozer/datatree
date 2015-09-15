@@ -1,12 +1,9 @@
 import sbt._
 import sbt.Keys._
-import com.inthenow.sbt.scalajs._
-import com.inthenow.sbt.scalajs.SbtScalajs._
-import scala.scalajs.sbtplugin.ScalaJSPlugin._
-import ScalaJSKeys._
 import bintray.Plugin._
 import bintray.Keys._
 import org.eclipse.jgit.lib._
+import org.scalajs.sbtplugin.cross.CrossProject._
 
 object DatatreeBuild extends Build {
   val logger = ConsoleLogger()
@@ -14,47 +11,37 @@ object DatatreeBuild extends Build {
   logger.info("Java environment:")
   logger.info(System.getenv.toString)
 
-  val baseVersion = "0.1.3"
+  val baseVersion = "0.2.0"
 
-  lazy val buildSettings: Seq[Setting[_]] = bintrayPublishSettings ++ Seq(
-//    scalacOptions ++= Seq("-Xlog-implicits"),
-    scalaVersion := "2.11.5",
-    crossScalaVersions := Seq("2.11.4", "2.10.4"),
-    scalacOptions ++= Seq("-deprecation", "-unchecked"),
-    organization := "uk.co.turingatemyhamster",
-    version := makeVersion(baseVersion),
-    publishMavenStyle := true,
-    repository in bintray := "maven",
-    bintrayOrganization in bintray := None,
-    licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html")),
+  lazy val sharedSettings = bintrayPublishSettings ++ Seq(
+    //    scalacOptions ++= Seq("-Xlog-implicits"),
+        scalaVersion := "2.11.6",
+        scalacOptions ++= Seq("-deprecation", "-unchecked"),
+        organization := "uk.co.turingatemyhamster",
+        version := makeVersion(baseVersion),
+        publishMavenStyle := true,
+        repository in bintray := "maven",
+        bintrayOrganization in bintray := None,
+        licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html"))
+  )
+
+  lazy val core = crossProject.settings(
+    libraryDependencies += "com.github.mpilquist" %% "simulacrum" % "0.3.0",
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
+  ).settings(sharedSettings : _*)
+
+  lazy val coreJVM = core.jvm.settings(
+    libraryDependencies += "org.spire-math" %% "jawn-ast" % "0.7.2",
+    libraryDependencies += "uk.co.turingatemyhamster" %% "gv-core" % "develop-0.3.3",
+    libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.12.1" % "test"
   )
 
-  val module = XModule(id = "datatree", defaultSettings = buildSettings)
+  lazy val coreJS = core.js
 
-  lazy val datatree             = module.project(datatreePlatformJvm, datatreePlatformJs)
-  lazy val datatreePlatformJvm  = module.jvmProject(datatreeSharedJvm).
-      settings(platformSettings : _*).settings(platformJvmSettings : _*)
-  lazy val datatreePlatformJs   = module.jsProject(datatreeSharedJs).
-      settings(platformSettings : _*)
-  lazy val datatreeSharedJvm    = module.jvmShared().
-        settings(sharedSettings : _*)
-  lazy val datatreeSharedJs     = module.jsShared(datatreeSharedJvm).
-          settings(sharedSettings : _*)
+  lazy val root = Project(
+    id = "datatree",
+    base = file(".")) aggregate (coreJS, coreJVM)
 
-  lazy val platformSettings = Seq(description := "Datatree platform-specific API")
-  lazy val sharedSettings = Seq(
-    description := "Datatree cross-platform API",
-    libraryDependencies += "com.github.mpilquist" %% "simulacrum" % "0.3.0"
-  )
-
-  lazy val platformJvmSettings = Seq(
-    libraryDependencies ++= Seq(
-      "org.spire-math" %% "jawn-ast" % "0.7.2",
-      "uk.co.turingatemyhamster" %% "gv-core" % "develop-0.3.3",
-      "org.scalacheck" %% "scalacheck" % "1.12.1" % "test"
-    )
-  )
 
   def fetchGitBranch(): String = {
     val builder = new RepositoryBuilder()
