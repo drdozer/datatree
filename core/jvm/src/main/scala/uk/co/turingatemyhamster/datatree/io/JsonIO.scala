@@ -31,7 +31,7 @@ trait JsonIO[DT <: Datatree] {
   import webDSL.Members._
   import webDSL.Methods._
   import datatreeDSL.Members._
-  import datatreeDSL.Methods._
+//  import datatreeDSL.Methods._
 
   def qname2string(qname: jQName): String
   def string2qname(string: String): jQName
@@ -63,11 +63,11 @@ trait JsonIO[DT <: Datatree] {
 
     def writeLiteral(l: DT#Literal): JValue = l.fold(
       sLit => JString(sLit.value),
-      uLit => JObject.fromSeq(Seq(RDF_RESOURCE -> JString(uLit.value.get))),
       lLit => JNum(lLit.value),
       dLit => JNum(dLit.value),
-      tLit => JString(s"${tLit.value}^^${tLit.valueType}t"),
-      bLit => JBool(bLit.value))
+      bLit => JBool(bLit.value),
+      uLit => JObject.fromSeq(Seq(RDF_RESOURCE -> JString(uLit.value.get))),
+      tLit => JString(s"${tLit.value}^^${tLit.valueType}t"))
   }
 
   object read {

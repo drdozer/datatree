@@ -1,6 +1,6 @@
 package uk.co.turingatemyhamster.relations
 
-import scala.language.implicitConversions
+import scala.language.{higherKinds, implicitConversions}
 
 /**
  * Created by caroline on 23/08/2014.

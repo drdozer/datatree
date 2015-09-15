@@ -299,10 +299,15 @@ object RdfIoSpecification extends Properties("RdfIO") {
     override val rdfIo: RdfIo[DT] = _rdfIo
   }
 
-  lazy val astIoSpec = rdfIoSpecification[AstDatatree]("AstDatatree")
+  val spec = rdfIoSpecification[AstDatatree]("AstDatatree")
 
-  property("AstDatatree can be manipulated by RdfIo") = astIoSpec
-
+  property("write/read whole document") = spec.`write/read whole document`
+  property("write/read string attribute") = spec.`write/read string attribute`
+  property("write/read uri attribute") = spec.`write/read uri attribute`
+  property("write/read integer attribute") = spec.`write/read integer attribute`
+  property("write/read nested document") = spec.`write/read nested document`
+  property("write/read flat nested document") = spec.`write/read flat nested document`
+  property("nameApi") = spec.`nameApi`
 }
 
 /**
@@ -328,8 +333,7 @@ abstract class RdfIoSpecification[DT <: Datatree](name: String) extends Properti
   import webGenerators._
   import datatreeGenerators._
 
-  def is = {
-    property("write/read whole document") = forAll { (docRoot: DT#DocumentRoot) =>
+  lazy val `write/read whole document` = forAll { (docRoot: DT#DocumentRoot) =>
       val writer = new StringWriter
       val xmlWriter = new IndentingXMLStreamWriter(
         XMLOutputFactory.newInstance.createXMLStreamWriter(
@@ -354,7 +358,7 @@ abstract class RdfIoSpecification[DT <: Datatree](name: String) extends Properti
       (docRoot == read) :| f"original value should be equal to the value after write/read, which is:\n$read\n$written"
     }
 
-    property("write/read string attribute") = forAll { (attr: DT#StringLiteral) =>
+  lazy val `write/read string attribute` = forAll { (attr: DT#StringLiteral) =>
       val prop = NamedProperty(ZeroMany(ioConstants.rdf), One(ioConstants.rdf_rdf), One(attr))
       val writer = new StringWriter
       val xmlWriter = new IndentingXMLStreamWriter(
@@ -381,7 +385,7 @@ abstract class RdfIoSpecification[DT <: Datatree](name: String) extends Properti
       (attr == read) :| f"original value should be equal to the value after write/read, which is:\n$read\n$written"
     }
 
-    property("write/read uri attribute") = forAll { (attr: DT#UriLiteral) =>
+   lazy val `write/read uri attribute` = forAll { (attr: DT#UriLiteral) =>
       val prop = NamedProperty(ZeroMany(ioConstants.rdf), One(ioConstants.rdf_rdf), One(attr))
       val writer = new StringWriter
       val xmlWriter = new IndentingXMLStreamWriter(
@@ -408,7 +412,7 @@ abstract class RdfIoSpecification[DT <: Datatree](name: String) extends Properti
       (attr == read) :| f"original value should be equal to the value after write/read, which is:\n$read\n$written"
     }
 
-    property("write/read integer attribute") = forAll { (attr: DT#LongLiteral) =>
+    lazy val `write/read integer attribute` = forAll { (attr: DT#LongLiteral) =>
       val prop = NamedProperty(ZeroMany(ioConstants.rdf), One(ioConstants.rdf_rdf), One(attr))
       val writer = new StringWriter
       val xmlWriter = new IndentingXMLStreamWriter(
@@ -435,7 +439,7 @@ abstract class RdfIoSpecification[DT <: Datatree](name: String) extends Properti
       (attr == read) :| f"original value should be equal to the value after write/read, which is:\n$read\n$written"
     }
 
-    property("write/read nested document") = forAll(new NamespaceBindings(Seq()).genNestedDocument(2, Seq(ioConstants.rdf))) { (doc: DT#NestedDocument) =>
+    lazy val `write/read nested document` = forAll(new NamespaceBindings(Seq()).genNestedDocument(2, Seq(ioConstants.rdf))) { (doc: DT#NestedDocument) =>
 
       val writer = new StringWriter
       val xmlWriter = new IndentingXMLStreamWriter(
@@ -464,7 +468,7 @@ abstract class RdfIoSpecification[DT <: Datatree](name: String) extends Properti
       (doc == read) :| f"original value should be equal to the value after write/read, which is:\n$read\n$written"
     }
 
-    property("write/read flat nested document") = forAll(new NamespaceBindings(Seq()).genNestedDocument(0, Seq(ioConstants.rdf))) { (doc: DT#NestedDocument) =>
+    lazy val `write/read flat nested document` = forAll(new NamespaceBindings(Seq()).genNestedDocument(0, Seq(ioConstants.rdf))) { (doc: DT#NestedDocument) =>
       val writer = new StringWriter
       val xmlWriter = new IndentingXMLStreamWriter(
         XMLOutputFactory.newInstance.createXMLStreamWriter(
@@ -492,12 +496,11 @@ abstract class RdfIoSpecification[DT <: Datatree](name: String) extends Properti
       (doc == read) :| f"original value should be equal to the value after write/read, which is:\n$read\n$written"
     }
 
-    property("nameApi") = forAll { (n: DT#QName) =>
+    lazy val `nameApi` = forAll { (n: DT#QName) =>
       val n2 = n match {
         case webDSL.QName(prefix, namespaceUri, localPart) => QName(prefix, namespaceUri, localPart)
       }
 
       (n == n2) :| f"name destructor/constructor should commute: $n2"
     }
-  }
 }

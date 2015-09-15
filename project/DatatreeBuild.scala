@@ -33,7 +33,8 @@ object DatatreeBuild extends Build {
   lazy val coreJVM = core.jvm.settings(
     libraryDependencies += "org.spire-math" %% "jawn-ast" % "0.7.2",
     libraryDependencies += "uk.co.turingatemyhamster" %% "gv-core" % "develop-0.3.3",
-    libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.12.1" % "test"
+    libraryDependencies += "org.specs2" %% "specs2-core" % "3.6.4" % "test",
+    libraryDependencies += "org.specs2" %% "specs2-scalacheck" % "3.6.4" % "test"
   )
 
   lazy val coreJS = core.js

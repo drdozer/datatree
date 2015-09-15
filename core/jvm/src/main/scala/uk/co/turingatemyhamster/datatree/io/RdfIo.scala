@@ -7,6 +7,7 @@ import javax.xml.stream.{XMLStreamConstants, XMLStreamReader, XMLStreamWriter}
 
 import relations._
 import web._
+import typeclass._
 
 
 object RdfIo {
@@ -45,7 +46,7 @@ trait RdfIo[DT <: Datatree] {
 
   object read {
     val DoubleR = """([+-]?\d+\.\d*(e[+-]\d*)?)""".r
-    val IntegerR = """([+-]?\d+)""".r
+    val LongR = """([+-]?\d+)""".r
     val BooleanR = """((true)|(false))""".r
     val TypedR = """([^^]*)^^(.*)""".r
 
@@ -166,7 +167,7 @@ trait RdfIo[DT <: Datatree] {
     def property(implicit reader: XMLStreamReader): DT#NamedProperty = reader.parseElement { (qname, bindings, attrs) =>
       def makeLiteral(text: String): DT#Literal = text match {
         case DoubleR(d) => DoubleLiteral(d.toDouble)
-        case IntegerR(i) => LongLiteral(i.toInt)
+        case LongR(i) => LongLiteral(i.toLong)
         case BooleanR(b) => BooleanLiteral(b.toBoolean)
         case s => StringLiteral(s)
       }
@@ -311,17 +312,17 @@ trait RdfIo[DT <: Datatree] {
     def property(prop: DT#NamedProperty)(implicit writer: XMLStreamWriter): Unit = {
       writer.writeStartElement(prop.name.get : DT#QName)
       bindings(prop.bindings.seq)
-      prop.value match {
-        case nd@datatreeDSL.NestedDocument(_, _, _, _) =>
-          document(nd)
-        case datatreeDSL.UriLiteral(value) =>
-          writer.writeAttribute(rdf_resource, value)
-        case datatreeDSL.TypedLiteral(value, xsdType) =>
-          writer.writeAttribute(rdf_datatype : DT#QName, xsdType)
-          writer.writeCharacters(value)
-        case l@datatreeDSL.Literal(value) =>
-          writer.writeCharacters(value.toString)
-      }
+      prop.value.get.fold(document,
+        lit => lit.fold(
+          l => writer.writeCharacters(l.value),
+          l => writer.writeCharacters(l.value.toString),
+          l => writer.writeCharacters(l.value.toString),
+          l => writer.writeCharacters(l.value.toString),
+          l => writer.writeAttribute(rdf_resource, l.value),
+          l => {
+            writer.writeAttribute(rdf_datatype : DT#QName, l.valueType)
+            writer.writeCharacters(l.value)
+          }))
       writer.writeEndElement()
     }
 

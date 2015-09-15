@@ -4,7 +4,7 @@ package ast
 
 import typeclass._
 import uk.co.turingatemyhamster.relations.{RelationsDSL, ScalaRelations}
-import web.ast.AstWeb
+import uk.co.turingatemyhamster.web.ast.{Uri, AstWeb}
 
 import scala.language.higherKinds
 
@@ -46,36 +46,33 @@ object AstDatatree {
 
     implicit def withBindingsMembers[Ast_WithBindings <: AstDatatree#WithBindings]: WithBindingsMembers[Ast_WithBindings] =
       new WithBindingsMembers[Ast_WithBindings] {
-      override def bindings(wb: Ast_WithBindings) = wb.bindings
+        override def bindings(wb: Ast_WithBindings) = wb.bindings
+      }
+
+    implicit object withBindingsFold extends Fold3[AstDatatree#WithBindings, AstDatatree#Document, AstDatatree#DocumentRoot, AstDatatree#NamedProperty] {
+      override def fold[A](wb: AstDatatree#WithBindings)
+                          (doc: (AstDatatree#Document) => A,
+                           root: (AstDatatree#DocumentRoot) => A,
+                           prop: (AstDatatree#NamedProperty) => A): A = wb match {
+        case d: ast.Document =>
+          doc(d)
+        case r : ast.DocumentRoot =>
+          root(r)
+        case p : ast.NamedProperty =>
+          prop(p)
+      }
     }
 
-    implicit def withBindingsMethods[Ast_WithBindings <: AstDatatree#WithBindings]: WithBindingsMethods[Ast_WithBindings] =
-      new WithBindingsMethods[Ast_WithBindings] {
-        override def fold[A](wb: Ast_WithBindings,
-                             doc: (AstDatatree#Document) => A,
-                             root: (AstDatatree#DocumentRoot) => A,
-                             prop: (AstDatatree#NamedProperty) => A): A = wb match {
-          case d: ast.Document =>
-            doc(d)
-          case r : ast.DocumentRoot =>
-            root(r)
-          case p : ast.NamedProperty =>
-            prop(p)
-        }
+    implicit object propertyValueFold extends Fold2[AstDatatree#PropertyValue, AstDatatree#NestedDocument, AstDatatree#Literal] {
+    override def fold[A](pv: AstDatatree#PropertyValue)(
+      nd: (AstDatatree#NestedDocument) => A,
+      lit: (AstDatatree#Literal) => A): A = pv match {
+        case n : ast.NestedDocument =>
+          nd(n)
+        case l : ast.Literal =>
+          lit(l)
       }
-    
-    
-    implicit def propertyValueMethods[Ast_PropertyValue <: AstDatatree#PropertyValue]: PropertyValueMethods[Ast_PropertyValue] =
-      new PropertyValueMethods[Ast_PropertyValue] {
-        override def fold[A](pv: Ast_PropertyValue)(
-                             nd: (AstDatatree#NestedDocument) => A,
-                             lit: (AstDatatree#Literal) => A): A = pv match {
-          case n : ast.NestedDocument =>
-            nd(n)
-          case l : ast.Literal =>
-            lit(l)
-        }
-      }
+    }
 
 
     implicit def documentMembers[Ast_Document <: AstDatatree#Document]: DocumentMembers[Ast_Document] =
@@ -85,19 +82,19 @@ object AstDatatree {
         override def properties(document: Ast_Document) = document.properties
       }
 
-    implicit def documentMethods[Ast_Document <: AstDatatree#Document]: DocumentMethods[Ast_Document] =
-      new DocumentMethods[Ast_Document] {
-        override def fold[A](doc: Ast_Document,
-                             topLevel: (AstDatatree#TopLevelDocument) => A,
-                             nested: (AstDatatree#NestedDocument) => A): A = {
-          doc match {
-            case tld : ast.TopLevelDocument =>
-              topLevel(tld)
-            case nd : ast.NestedDocument =>
-              nested(nd)
-          }
+    implicit object documentFold extends Fold2[AstDatatree#Document, AstDatatree#TopLevelDocument, AstDatatree#NestedDocument] {
+      override def fold[A](doc: AstDatatree#Document)
+                          (topLevel: (AstDatatree#TopLevelDocument) => A,
+                           nested: (AstDatatree#NestedDocument) => A): A =
+      {
+        doc match {
+          case tld : ast.TopLevelDocument =>
+            topLevel(tld)
+          case nd : ast.NestedDocument =>
+            nested(nd)
         }
       }
+    }
 
 
     implicit object DocumentRoot extends DocumentRootCompanion {
@@ -157,15 +154,10 @@ object AstDatatree {
     }
 
 
-    implicit override def Literal[Ast_Literal <: AstDatatree#Literal]: LiteralDestructor[Ast_Literal] =
-      new LiteralDestructor[Ast_Literal] {
-        override def unapply(t: Ast_Literal) = Some(t.value)
-      }
-
-    implicit override def literalMethods[Ast_Literal <: AstDatatree#Literal]: LiteralMethods[Ast_Literal] =
-      new LiteralMethods[Ast_Literal] {
-        override def fold[A](lit: Ast_Literal,
-                             sLit: (AstDatatree#StringLiteral) => A,
+    implicit override def literalFold: Fold6[AstDatatree#Literal, AstDatatree#StringLiteral, AstDatatree#LongLiteral, AstDatatree#DoubleLiteral, AstDatatree#BooleanLiteral, AstDatatree#UriLiteral, AstDatatree#TypedLiteral] =
+      new Fold6[AstDatatree#Literal, AstDatatree#StringLiteral, AstDatatree#LongLiteral, AstDatatree#DoubleLiteral, AstDatatree#BooleanLiteral, AstDatatree#UriLiteral, AstDatatree#TypedLiteral] {
+        override def fold[A](lit: AstDatatree#Literal)
+                            (sLit: (AstDatatree#StringLiteral) => A,
                              lLit: (AstDatatree#LongLiteral) => A,
                              dLit: (AstDatatree#DoubleLiteral) => A,
                              bLit: (AstDatatree#BooleanLiteral) => A,
@@ -192,29 +184,60 @@ object AstDatatree {
       override def unapply(t: AstDatatree#StringLiteral) = ast.StringLiteral.unapply(t)
     }
 
+    implicit object stringLiteralMembers extends StringLiteralMembers[AstDatatree#StringLiteral] {
+      override def value(sl: StringLiteral) = sl.value
+    }
+
+
     implicit object LongLiteral extends LongLiteralCompanion {
       override def apply(a: Long) = ast.LongLiteral.apply(a)
       override def unapply(t: AstDatatree#LongLiteral) = ast.LongLiteral.unapply(t)
     }
+
+    implicit object longLiteralMembers extends LongLiteralMembers[AstDatatree#LongLiteral] {
+      override def value(ll: LongLiteral) = ll.value
+    }
+
 
     implicit object DoubleLiteral extends DoubleLiteralCompanion {
       override def apply(a: Double) = ast.DoubleLiteral.apply(a)
       override def unapply(t: AstDatatree#DoubleLiteral) = ast.DoubleLiteral.unapply(t)
     }
 
+    implicit object doubleLiteralMembers extends DoubleLiteralMembers[AstDatatree#DoubleLiteral] {
+      override def value(dl: DoubleLiteral) = dl.value
+    }
+
+
     implicit object BooleanLiteral extends BooleanLiteralCompanion {
       override def apply(a: Boolean) = ast.BooleanLiteral.apply(a)
       override def unapply(t: AstDatatree#BooleanLiteral) = ast.BooleanLiteral.unapply(t)
     }
+
+    implicit object booleanLiteralMembers extends BooleanLiteralMembers[AstDatatree#BooleanLiteral] {
+      override def value(bl: BooleanLiteral) = bl.value
+    }
+
 
     implicit object UriLiteral extends UriLiteralCompanion {
       override def apply(a: AstDatatree#Uri) = ast.UriLiteral.apply(a)
       override def unapply(t: AstDatatree#UriLiteral) = ast.UriLiteral.unapply(t)
     }
 
+    implicit object uriLiteralMembers extends UriLiteralMembers[AstDatatree#UriLiteral] {
+      override def value(ul: UriLiteral[Uri]) = ul.value
+    }
+
+
     implicit object TypedLiteral extends TypedLiteralCompanion {
       override def apply(a: String, b: String) = ast.TypedLiteral.apply(a, b)
       override def unapply(t: AstDatatree#TypedLiteral) = ast.TypedLiteral.unapply(t)
+    }
+
+    implicit object typedLiteralMembers extends TypedLiteralMembers[AstDatatree#TypedLiteral] {
+      override def value(tl: TypedLiteral) = tl.value
+
+      override def valueType(tl: TypedLiteral) = tl.xsdType
     }
   }
 }
