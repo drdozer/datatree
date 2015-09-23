@@ -11,7 +11,7 @@ object DatatreeBuild extends Build {
   logger.info("Java environment:")
   logger.info(System.getenv.toString)
 
-  val baseVersion = "0.2.0"
+  val baseVersion = "0.2.1"
 
   lazy val sharedSettings = bintrayPublishSettings ++ Seq(
     //    scalacOptions ++= Seq("-Xlog-implicits"),
@@ -26,6 +26,7 @@ object DatatreeBuild extends Build {
   )
 
   lazy val core = crossProject.settings(
+    name := "datatree-core",
     libraryDependencies += "com.github.mpilquist" %% "simulacrum" % "0.3.0",
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
   ).settings(sharedSettings : _*)

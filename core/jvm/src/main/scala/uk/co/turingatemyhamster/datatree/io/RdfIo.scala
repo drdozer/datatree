@@ -24,6 +24,12 @@ object RdfIo {
     override protected val relationsDSL: RelationsDSL[DT] = _relationsDSL
     override protected val datatreeDSL: DatatreeDSL[DT] = _datatreeDSL
   }
+
+  def read[DT <: Datatree](reader: XMLStreamReader)(implicit rdfIo: RdfIo[DT]): DT#DocumentRoot =
+    rdfIo.read(reader)
+
+  def write[DT <: Datatree](writer: XMLStreamWriter, doc: DT#DocumentRoot)(implicit rdfIo: RdfIo[DT]) =
+    rdfIo.write(writer, doc)
 }
 
 trait RdfIo[DT <: Datatree] {
