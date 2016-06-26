@@ -18,6 +18,7 @@ object DatatreeBuild extends Build {
         scalaVersion := "2.11.6",
         scalacOptions ++= Seq("-deprecation", "-unchecked"),
         organization := "uk.co.turingatemyhamster",
+        scalacOptions in Test ++= Seq("-Yrangepos"),
         version := makeVersion(baseVersion),
         publishMavenStyle := true,
         repository in bintray := "maven",
@@ -27,15 +28,15 @@ object DatatreeBuild extends Build {
 
   lazy val core = crossProject.settings(
     name := "datatree-core",
-    libraryDependencies += "com.github.mpilquist" %% "simulacrum" % "0.3.0",
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
+    libraryDependencies += "com.github.mpilquist" %% "simulacrum" % "0.7.0",
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
   ).settings(sharedSettings : _*)
 
   lazy val coreJVM = core.jvm.settings(
-    libraryDependencies += "org.spire-math" %% "jawn-ast" % "0.7.2",
+    libraryDependencies += "org.spire-math" %% "jawn-ast" % "0.8.4",
     libraryDependencies += "uk.co.turingatemyhamster" %% "gv-core" % "develop-0.3.3",
-    libraryDependencies += "org.specs2" %% "specs2-core" % "3.6.4" % "test",
-    libraryDependencies += "org.specs2" %% "specs2-scalacheck" % "3.6.4" % "test"
+    libraryDependencies += "org.specs2" %% "specs2-core" % "3.7.2" % "test",
+    libraryDependencies += "org.specs2" %% "specs2-scalacheck" % "3.7.2" % "test"
   )
 
   lazy val coreJS = core.js

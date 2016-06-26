@@ -115,10 +115,10 @@ trait JsonIO[DT <: Datatree] {
     }
 
     def readTLD(jObject: JObject): DT#TopLevelDocument =
-      readD(jObject, (t, i, ps) => TopLevelDocument.apply(`type` = t, identity = i, properties = ps))
+      readD(jObject, (t, i, ps) => TopLevelDocument.apply(ZeroMany(), `type` = t, identity = i, properties = ps))
 
     def readND(jObject: JObject): DT#NestedDocument =
-      readD(jObject, (t, i, ps) => NestedDocument.apply(`type` = t, identity = i, properties = ps))
+      readD(jObject, (t, i, ps) => NestedDocument.apply(ZeroMany(), `type` = t, identity = i, properties = ps))
 
     def readPV(jValue: JValue): DT#PropertyValue = jValue match {
       case JArray(_) =>

@@ -55,15 +55,18 @@ object RdfTest {
       bindings = ZeroMany(sbol2, testSpace),
       documents = ZeroMany(
         TopLevelDocument(
-          identity = testSpace uri "tld1",
-          `type` = sbol2 withLocalName "Model",
+          ZeroMany(),
+          identity = ZeroOne(testSpace uri "tld1"),
+          `type` = One(sbol2 withLocalName "Model"),
           properties = ZeroMany(
             sbol2 withLocalName "language" := "SBML",
             sbol2 withLocalName "source" := Uri("http://www.async.ece.utah.edu/LacI_Inverter.xml"),
             sbol2 withLocalName "role" := (sbo uri "0000062"),
             testSpace withLocalName "counter" := 5L,
             testSpace withLocalName "iMadeThis" := NestedDocument(
-              `type` = testSpace withLocalName "unicorn",
+              ZeroMany(),
+              ZeroOne(),
+              `type` = One(testSpace withLocalName "unicorn"),
               properties = ZeroMany(
                 testSpace.withLocalName("status") := "critically endangered")
             )

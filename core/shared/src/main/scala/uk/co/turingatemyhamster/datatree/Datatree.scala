@@ -91,20 +91,20 @@ trait DatatreeDSL[DT <: Datatree] {
                        identity: DT#ZeroOne[DT#Uri],
                        `type`: DT#One[DT#QName],
                        properties: DT#ZeroMany[DT#NamedProperty]): DocumentType
-
-    def apply[
-    I : Cstr[DT#ZeroOne[DT#Uri]]#λ,
-    T : Cstr[DT#One[DT#QName]]#λ](bindings: DT#ZeroMany[DT#NamespaceBinding] = ZeroMany(),
-                                  identity: I,
-                                  `type`: T,
-                                  properties: DT#ZeroMany[DT#NamedProperty] = ZeroMany()
-                                   ): DocumentType =
-      apply(bindings, identity : DT#ZeroOne[DT#Uri], `type` : DT#One[DT#QName], properties)
-
-    def apply[T : Cstr[DT#One[DT#QName]]#λ](`type`: T,
-                                            properties: DT#ZeroMany[DT#NamedProperty]
-                                             ): DocumentType =
-      apply(ZeroMany(), ZeroOne(), `type` : DT#One[DT#QName], properties)
+//
+//    def apply[
+//    I : Cstr[DT#ZeroOne[DT#Uri]]#λ,
+//    T : Cstr[DT#One[DT#QName]]#λ](bindings: DT#ZeroMany[DT#NamespaceBinding] = ZeroMany(),
+//                                  identity: I,
+//                                  `type`: T,
+//                                  properties: DT#ZeroMany[DT#NamedProperty] = ZeroMany()
+//                                   ): DocumentType =
+//      apply(bindings, identity : DT#ZeroOne[DT#Uri], `type` : DT#One[DT#QName], properties)
+//
+//    def apply[T : Cstr[DT#One[DT#QName]]#λ](`type`: T,
+//                                            properties: DT#ZeroMany[DT#NamedProperty]
+//                                             ): DocumentType =
+//      apply(ZeroMany(), ZeroOne(), `type` : DT#One[DT#QName], properties)
   }
 
 

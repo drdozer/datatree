@@ -181,7 +181,7 @@ trait DatatreeGenerators[DT <: Datatree] {
       identity <- arbitrary[DT#Uri]
       tpe <- nestedBindings.genName
       properties <- Gen.listOf(nestedBindings.genNamedProperty(sz))
-    } yield NestedDocument(ZeroMany(bindings :_*), identity, tpe, ZeroMany(properties :_*))
+    } yield NestedDocument(ZeroMany(bindings :_*), ZeroOne(identity), One(tpe), ZeroMany(properties :_*))
 
     implicit def genTopLevelDocument(bs: Seq[DT#NamespaceBinding] = Seq()): Gen[DT#TopLevelDocument] = for {
       bindings <- Gen.listOfN(2, arbitrary[DT#NamespaceBinding]).map(_ ++ bs)
@@ -190,7 +190,7 @@ trait DatatreeGenerators[DT <: Datatree] {
       tpe <- arbitrary[DT#QName]
       childCount <- Gen.chooseNum(0, 5)
       properties <- Gen.listOfN(childCount, nestedBindings.genNamedProperty(2))
-    } yield TopLevelDocument(ZeroMany(bindings :_*), identity, tpe, ZeroMany(properties :_*))
+    } yield TopLevelDocument(ZeroMany(bindings :_*), ZeroOne(identity), One(tpe), ZeroMany(properties :_*))
 
     implicit lazy val arbTopLevelDocument = Arbitrary { genTopLevelDocument() }
   }
