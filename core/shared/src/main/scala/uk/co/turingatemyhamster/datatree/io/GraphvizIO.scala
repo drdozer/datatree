@@ -1,11 +1,9 @@
-package uk.co.turingatemyhamster
-package datatree
-package io
+package uk.co.turingatemyhamster.datatree.io
 
-import typeclass._
-import relations._
-import web._
-import graphvizs.dsl._
+import uk.co.turingatemyhamster.datatree.{Datatree, DatatreeDSL}
+import uk.co.turingatemyhamster.graphvizs.dsl.{AttributeList, NodeStatement, Statement, _}
+import uk.co.turingatemyhamster.relations.RelationsDSL
+import uk.co.turingatemyhamster.web.WebDSL
 
 /**
  *
@@ -18,12 +16,12 @@ trait GraphvizIO[DT <: Datatree] {
   implicit val relationsDSL: RelationsDSL[DT]
   implicit val datatreeDSL: DatatreeDSL[DT]
 
+  import datatreeDSL._
+  import datatreeDSL.Members._
   import webDSL._
   import webDSL.Members._
   import relationsDSL._
   import relationsDSL.Methods._
-  import datatreeDSL._
-  import datatreeDSL.Members._
 
   trait Graphviz {
 
@@ -38,8 +36,8 @@ trait GraphvizIO[DT <: Datatree] {
 
       val lrRanks = AssignmentStatement("rank", "LR") +:
         documentRoot.documents.seq.flatMap(writeDocument) :+ Subgraph(
-        statements = AssignmentStatement("rank", "same") +:
-          documentRoot.documents.seq.flatMap(writeDocumentIdentity))
+        AssignmentStatement("rank", "same") +:
+          documentRoot.documents.seq.flatMap(writeDocumentIdentity) :_*)
 
       StrictDigraph("g", (lrRanks :_*))
     }
