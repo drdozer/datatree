@@ -20,7 +20,7 @@ object RdfIo {
                                      _webDSL: WebDSL[DT],
                                      _jQName: JQName[DT],
                                      _relationsDSL: RelationsDSL[DT],
-                                     _datatreeDSL: DatatreeDSL[DT]): RdfIo[DT] = new RdfIo[DT]
+                                     _datatreeDSL: DatatreeDSL[DT]) = new RdfIo[DT]
   {
     override protected val ioConstants: RdfConstants[DT] = _ioConstants
     override protected val jQName: JQName[DT] = _jQName

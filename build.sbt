@@ -25,7 +25,7 @@ lazy val coreJVM = core.jvm.settings(
 )
 
 lazy val coreJS = core.js.settings(
-  libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.9.0"
+  libraryDependencies += "com.lihaoyi" %%% "scalatags" % "0.5.5"
 )
 
 lazy val root = Project(
