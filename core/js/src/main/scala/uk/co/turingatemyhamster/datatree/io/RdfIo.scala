@@ -6,8 +6,9 @@ import datatree.{Datatree, DatatreeDSL}
 import relations.RelationsDSL
 import web.{JQName, RdfConstants, WebDSL}
 import typeclass._
-import org.scalajs.{dom => jsDom}
-import jsDom._
+
+import scalatags.{generic => sg}
+import scalatags.text.Builder
 
 /**
   *
@@ -28,24 +29,59 @@ object RdfIo {
     override protected val relationsDSL: RelationsDSL[DT] = _relationsDSL
     override protected val datatreeDSL: DatatreeDSL[DT] = _datatreeDSL
 
-    def createDocument: jsDom.Document = {
-      import ioConstants._
-      import webDSL._
-      import webDSL.Members._
-      jsDom.document.implementation.createDocument(rdf_rdf.namespace.uri.get, rdf_rdf.localName.get, null)
-    }
   }
 
-  def write[DT <: Datatree](writer: jsDom.Document, doc: DT#DocumentRoot)(implicit rdfIo: RdfIo[DT]) =
-    rdfIo.write(writer, doc)
+  def write[DT <: Datatree](doc: DT#DocumentRoot)(implicit rdfIo: RdfIo[DT]): XML.Element =
+    rdfIo.write(doc)
+
+  object XML {
+
+    type Element = scalatags.Text.TypedTag[String]
+    import scalatags.Text.all.makeAbstractTypedTag
+
+    implicit class NamespaceNamespaceOps[DT <: Datatree](val _n: DT#Namespace) extends AnyVal {
+      def toNamespace(implicit webDSL: WebDSL[DT]): sg.Namespace = new sg.Namespace {
+        import webDSL._
+        import webDSL.Members._
+        def uri = webDSL.NamespaceMembers.ops.toAllNamespaceMembersOps(_n).uri.get
+      }
+    }
+
+    implicit def namespacetoNamespace[DT <: Datatree](n: DT#Namespace)(implicit webDSL: WebDSL[DT]): sg.Namespace =
+      n.toNamespace
+
+    implicit class QNameTagOps[DT <: Datatree](val _q: DT#QName) extends AnyVal {
+      def tag(implicit webDSL: WebDSL[DT]): Element = {
+        import webDSL._
+        import webDSL.Members._
+        makeAbstractTypedTag(_q.prefix.get + ":" + _q.localName.get, false, _q.namespace)
+      }
+
+      def attr(implicit webDSL: WebDSL[DT]): sg.Attr = {
+        import webDSL._
+        import webDSL.Members._
+        sg.Attr(_q.prefix.get + ":" + _q.localName.get, None)
+      }
+    }
+
+    implicit def genericAttr[T]: scalatags.Text.GenericAttr[T] = new scalatags.Text.GenericAttr[T]
+
+    implicit class NamespaceBindingAttrOps[DT <: Datatree](val _nsb: DT#NamespaceBinding) extends AnyVal {
+      def xmlns(implicit webDSL: WebDSL[DT]): sg.AttrPair[Builder, String] = {
+        import webDSL._
+        import webDSL.Members._
+        sg.Attr("xmlns:" + _nsb.prefix.get) := _nsb.namespace.uri
+      }
+    }
+  }
 }
 
 trait RdfIo[DT <: Datatree] {
-  protected val ioConstants: RdfConstants[DT]
-  protected val jQName: JQName[DT]
-  protected val webDSL: WebDSL[DT]
-  protected val relationsDSL: RelationsDSL[DT]
-  protected val datatreeDSL: DatatreeDSL[DT]
+  protected implicit val ioConstants: RdfConstants[DT]
+  protected implicit val jQName: JQName[DT]
+  protected implicit val webDSL: WebDSL[DT]
+  protected implicit val relationsDSL: RelationsDSL[DT]
+  protected implicit val datatreeDSL: DatatreeDSL[DT]
 
   import ioConstants._
   import jQName._
@@ -59,68 +95,54 @@ trait RdfIo[DT <: Datatree] {
   import datatreeDSL.Members._
 
   object write {
-    def apply(writer: jsDom.Document, doc: DT#DocumentRoot): Unit = {
-      writeRoot(writer, Map.empty[String, String], writer.documentElement, doc)
-    }
+    import RdfIo.XML._
+    import scalatags.Text.all.stringFrag
 
-    def writeRoot(writer: jsDom.Document,
-                  lnToNs: Map[String, String],
-                  at: jsDom.Element,
-                  doc: DT#DocumentRoot): Unit =
-    {
-      val withBindings = addBindings(lnToNs, doc.bindings)
-      for(c <- doc.documents.seq) {
-        writeDocument(writer, withBindings, at, c)
-      }
-    }
-
-    def writeDocument(writer: jsDom.Document,
-                      lnToNs: Map[String, String],
-                      at: jsDom.Element,
-                      doc: DT#Document): Unit =
-    {
-      val `type` = doc.`type`.get
-      val el = writer.createElementNS(`type`.namespace.uri.get, `type`.localName.get)
-      val withBindings = addBindings(lnToNs, doc.bindings)
-      addIdentity(writer, withBindings, el, doc.identity)
-      addProperties(writer, withBindings, el, doc.properties)
-      at.appendChild(el)
-    }
-
-    def addBindings(lnToNs: Map[String, String],
-                    bindings: DT#ZeroMany[DT#NamespaceBinding]): Map[String, String] =
-      lnToNs ++ bindings.seq.map(b => b.prefix.get -> b.namespace.uri.get)
-
-    def addIdentity(writer: jsDom.Document,
-                    lnToNs: Map[String, String],
-                    at: jsDom.Element,
-                    ident: DT#ZeroOne[DT#Uri]): Unit =
-      for(i <- ident.seq) {
-        at.setAttributeNS(rdf_about.namespace.uri.get, rdf_about.localName.get, i.get)
+    def makeBindings(lnToNs: Map[String, String], bindings: DT#ZeroMany[DT#NamespaceBinding])
+    : (Map[String, String], Seq[sg.AttrPair[Builder, String]]) = {
+      val pairs = bindings.seq map { nsb => nsb.prefix.get -> nsb.namespace.uri }
+      val newMap = lnToNs ++ pairs
+      val bndgs = bindings.seq filter {
+        nsb => lnToNs.get(nsb.prefix.get).contains(nsb.namespace.uri) } map {
+        nsb => nsb.xmlns
       }
 
-    def addProperties(writer: jsDom.Document,
-                      lnToNs: Map[String, String],
-                      at: jsDom.Element,
-                      props: DT#ZeroMany[DT#NamedProperty]): Unit =
-      for(p <- props.seq) {
-        val nm = p.name.get
-        val pEl = writer.createElementNS(nm.namespace.uri.get, nm.localName.get)
-        at.appendChild(pEl)
-        p.value.get.fold(
-          doc => writeDocument(writer, lnToNs, pEl, doc),
-          lit => lit.fold(
-            l => pEl.textContent = l.value,
-            l => pEl.textContent = l.value.toString(),
-            l => pEl.textContent = l.value.toString(),
-            l => pEl.textContent = l.value.toString(),
-            l => pEl.setAttributeNS(rdf_resource.namespace.uri.get, rdf_resource.localName.get, l.value.get),
-            l => {
-              pEl.setAttributeNS(rdf_datatype.namespace.uri.get, rdf_datatype.localName.get, l.valueType)
-              pEl.textContent = l.value
-            }
-          )
+      (newMap, bndgs)
+    }
+
+    def apply(doc: DT#DocumentRoot): Element =
+      writeRoot(doc, Map(rdf.prefix.get -> rdf.namespace.uri))
+
+    def writeRoot(doc: DT#DocumentRoot, lnToNs: Map[String, String]): Element =
+    {
+      val (newMap, bindings) = makeBindings(lnToNs, doc.bindings)
+      val children = doc.documents.seq map (d => writeDocument(d, newMap))
+      rdf_rdf.tag.apply(rdf.xmlns)(bindings :_*)(children :_*)
+    }
+
+    def writeDocument(doc: DT#Document, lnToNs: Map[String, String]): Element =
+    {
+      val (newMap, bindings) = makeBindings(lnToNs, doc.bindings)
+      val id = doc.identity.seq map (rdf_about.attr := _.get)
+      val children = doc.properties.seq map (p => writeProperty(p, newMap))
+      doc.`type`.get.tag.apply(bindings :_*)(id :_*)(children :_*)
+    }
+
+    def writeProperty(prop: DT#NamedProperty, lnToNs: Map[String, String]): Element =
+    {
+      val (newMap, bindings) = makeBindings(lnToNs, prop.bindings)
+      val el = prop.name.get.tag
+      prop.value.get.fold(
+        doc => el(writeDocument(doc, newMap)),
+        lit => lit.fold(
+          l => el(l.value),
+          l => el(l.value.toString()),
+          l => el(l.value.toString()),
+          l => el(l.value.toString()),
+          l => el(rdf_resource.attr := l.value.get),
+          l => el(rdf_datatype.attr := l.valueType)(l.value)
         )
-      }
+      )
+    }
   }
 }
