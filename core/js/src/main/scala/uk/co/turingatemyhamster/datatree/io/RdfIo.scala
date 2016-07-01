@@ -102,8 +102,9 @@ trait RdfIo[DT <: Datatree] {
     : (Map[String, String], Seq[sg.AttrPair[Builder, String]]) = {
       val pairs = bindings.seq map { nsb => nsb.prefix.get -> nsb.namespace.uri }
       val newMap = lnToNs ++ pairs
+      val extras = newMap.to[Set] diff lnToNs.to[Set]
       val bndgs = bindings.seq filter {
-        nsb => lnToNs.get(nsb.prefix.get).contains(nsb.namespace.uri) } map {
+        nsb => extras.contains(nsb.prefix.get -> nsb.namespace.uri) } map {
         nsb => nsb.xmlns
       }
 
