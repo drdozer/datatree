@@ -59,7 +59,6 @@ trait JsonIO[DT <: Datatree] {
       writeLiteral _)
 
     def writeLiteral(l: DT#Literal): Js.Value = l.fold(
-      sLit => Js.Str(sLit.value),
       lLit => Js.Num(lLit.value),
       dLit => Js.Num(dLit.value),
       bLit => if(bLit.value) Js.True else Js.False,
@@ -129,7 +128,7 @@ trait JsonIO[DT <: Datatree] {
       case Js.Num(d) =>
         DoubleLiteral(d)
       case Js.Str(str) =>
-        StringLiteral(str)
+        TypedLiteral(One(str), ZeroOne(), ZeroOne())
       case Js.Null =>
         throw new IllegalArgumentException("Can't process NULL at this position")
       case jO : Js.Obj =>

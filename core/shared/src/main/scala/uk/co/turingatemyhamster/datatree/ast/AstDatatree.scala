@@ -23,7 +23,6 @@ trait AstDatatree extends Datatree with AstWeb with ScalaRelations {
   override final type NestedDocument = ast.NestedDocument
   override final type NamedProperty = ast.NamedProperty
   override final type Literal = ast.Literal
-  override final type StringLiteral = ast.StringLiteral
   override final type LongLiteral = ast.LongLiteral
   override final type DoubleLiteral = ast.DoubleLiteral
   override final type BooleanLiteral = ast.BooleanLiteral
@@ -154,17 +153,14 @@ object AstDatatree {
     }
 
 
-    implicit override def literalFold: Fold6[AstDatatree#Literal, AstDatatree#StringLiteral, AstDatatree#LongLiteral, AstDatatree#DoubleLiteral, AstDatatree#BooleanLiteral, AstDatatree#UriLiteral, AstDatatree#TypedLiteral] =
-      new Fold6[AstDatatree#Literal, AstDatatree#StringLiteral, AstDatatree#LongLiteral, AstDatatree#DoubleLiteral, AstDatatree#BooleanLiteral, AstDatatree#UriLiteral, AstDatatree#TypedLiteral] {
+    implicit override def literalFold: Fold5[AstDatatree#Literal, AstDatatree#LongLiteral, AstDatatree#DoubleLiteral, AstDatatree#BooleanLiteral, AstDatatree#UriLiteral, AstDatatree#TypedLiteral] =
+      new Fold5[AstDatatree#Literal, AstDatatree#LongLiteral, AstDatatree#DoubleLiteral, AstDatatree#BooleanLiteral, AstDatatree#UriLiteral, AstDatatree#TypedLiteral] {
         override def fold[A](lit: AstDatatree#Literal)
-                            (sLit: (AstDatatree#StringLiteral) => A,
-                             lLit: (AstDatatree#LongLiteral) => A,
+                            (lLit: (AstDatatree#LongLiteral) => A,
                              dLit: (AstDatatree#DoubleLiteral) => A,
                              bLit: (AstDatatree#BooleanLiteral) => A,
                              uLit: (AstDatatree#UriLiteral) => A,
                              tLit: (AstDatatree#TypedLiteral) => A): A = lit match {
-          case s : StringLiteral =>
-            sLit(s)
           case l : LongLiteral =>
             lLit(l)
           case d : DoubleLiteral =>
@@ -177,17 +173,6 @@ object AstDatatree {
             tLit(t)
         }
       }
-
-
-    implicit object StringLiteral extends StringLiteralCompanion {
-      override def apply(a: String) = ast.StringLiteral.apply(a)
-      override def unapply(t: AstDatatree#StringLiteral) = ast.StringLiteral.unapply(t)
-    }
-
-    implicit object stringLiteralMembers extends StringLiteralMembers[AstDatatree#StringLiteral] {
-      override def value(sl: StringLiteral) = sl.value
-    }
-
 
     implicit object LongLiteral extends LongLiteralCompanion {
       override def apply(a: Long) = ast.LongLiteral.apply(a)
@@ -230,7 +215,7 @@ object AstDatatree {
 
 
     implicit object TypedLiteral extends TypedLiteralCompanion {
-      override def apply(a: String, b: Uri) = ast.TypedLiteral.apply(a, b)
+      override def apply(a: String, b: Option[Uri], c: Option[String]) = ast.TypedLiteral.apply(a, b, c)
       override def unapply(t: AstDatatree#TypedLiteral) = ast.TypedLiteral.unapply(t)
     }
 
@@ -238,6 +223,14 @@ object AstDatatree {
       override def value(tl: TypedLiteral) = tl.value
 
       override def valueType(tl: TypedLiteral) = tl.xsdType
+
+      override def lang(tl: TypedLiteral) = tl.lang
+    }
+
+    implicit object TypedLiteralS extends TypedLiteralSCompanion {
+      override def apply(a: String) = ast.TypedLiteral.apply(a, None, None)
+
+      override def unapply(t: TypedLiteral) = Option(t.value)
     }
   }
 }
@@ -290,10 +283,6 @@ sealed trait Literal extends PropertyValue {
   def value: Value
 }
 
-case class StringLiteral(value: String) extends Literal {
-  type Value = String
-}
-
 case class LongLiteral(value: Long) extends Literal {
   type Value = Long
 }
@@ -310,7 +299,7 @@ case class UriLiteral[Uri](value: Uri) extends Literal {
   type Value = Uri
 }
 
-case class TypedLiteral(value: String, xsdType: Uri) extends Literal {
+case class TypedLiteral(value: String, xsdType: Option[Uri], lang: Option[String]) extends Literal {
   type Value = String
 }
 

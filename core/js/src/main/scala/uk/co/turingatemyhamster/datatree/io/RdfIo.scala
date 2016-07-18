@@ -7,7 +7,9 @@ import relations.RelationsDSL
 import web.{JQName, RdfConstants, WebDSL}
 import typeclass._
 
-import scalatags.{generic => sg}
+import scalatags.Text.GenericAttr
+import scalatags.{Text, generic => sg}
+import sg._
 import scalatags.text.Builder
 
 /**
@@ -64,7 +66,22 @@ object RdfIo {
       }
     }
 
-    implicit def genericAttr[T]: scalatags.Text.GenericAttr[T] = new scalatags.Text.GenericAttr[T]
+    def genericAttr[T] = new Text.GenericAttr[T]
+
+    implicit val stringAttr = genericAttr[String]
+    implicit val booleanAttr = genericAttr[Boolean]
+    implicit val byteAttr = genericAttr[Byte]
+    implicit val shortAttr = genericAttr[Short]
+    implicit val intAttr = genericAttr[Int]
+    implicit val longAttr = genericAttr[Long]
+    implicit val floatAttr = genericAttr[Float]
+    implicit val doubleAttr = genericAttr[Double]
+
+    implicit def optionValue[T](implicit ev: AttrValue[Builder, T]): AttrValue[Builder, Option[T]] = new Text.AttrValue[Option[T]] {
+      override def apply(t: Builder,
+                         a: Attr,
+                         v: Option[T]) = v.foreach(vv => ev.apply(t, a, vv))
+    }
 
     implicit class NamespaceBindingAttrOps[DT <: Datatree](val _nsb: DT#NamespaceBinding) extends AnyVal {
       def xmlns(implicit webDSL: WebDSL[DT]): sg.AttrPair[Builder, String] = {
@@ -136,12 +153,13 @@ trait RdfIo[DT <: Datatree] {
       prop.value.get.fold(
         doc => el(writeDocument(doc, newMap)),
         lit => lit.fold(
-          l => el(l.value),
           l => el(l.value.toString()),
           l => el(l.value.toString()),
           l => el(l.value.toString()),
           l => el(rdf_resource.attr := l.value.get),
-          l => el(rdf_datatype.attr := l.valueType)(l.value)
+          l => el(
+            rdf_datatype.attr := l.valueType.seq.map(_.get).headOption,
+            rdf_lang.attr := l.lang.seq.headOption)(l.value.get)
         )
       )
     }

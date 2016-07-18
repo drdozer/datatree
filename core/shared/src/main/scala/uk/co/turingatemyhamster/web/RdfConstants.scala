@@ -18,4 +18,5 @@ trait RdfConstants[W <: Web] {
   lazy val rdf_about = rdf :- "about"
   lazy val rdf_resource = rdf :- "resource"
   lazy val rdf_datatype = rdf :- "datatype"
+  lazy val rdf_lang = rdf :- "lang"
 }

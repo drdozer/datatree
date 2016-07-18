@@ -22,7 +22,6 @@ trait Datatree extends Web with Relations {
   type NestedDocument <: Document with PropertyValue
   type NamedProperty <: WithBindings
   type Literal <: PropertyValue
-  type StringLiteral <: Literal
   type LongLiteral <: Literal
   type DoubleLiteral <: Literal
   type BooleanLiteral <: Literal
@@ -140,20 +139,8 @@ trait DatatreeDSL[DT <: Datatree] {
 //  implicit def Literal[DT_Literal <: DT#Literal]: LiteralDestructor[DT_Literal]
 //  trait LiteralDestructor[DT_Literal] extends Destructor1[DT_Literal] { type A = Any }
 
-  implicit def literalFold: Fold6[DT#Literal,
-    DT#StringLiteral, DT#LongLiteral, DT#DoubleLiteral, DT#BooleanLiteral, DT#UriLiteral, DT#TypedLiteral]
-
-
-  trait StringLiteralCompanion extends Companion1[DT#StringLiteral] {
-    type A = String
-    override def apply(value: A): DT#StringLiteral
-  }
-  implicit def StringLiteral: StringLiteralCompanion
-
-  implicit def stringLiteralMembers: StringLiteralMembers[DT#StringLiteral]
-  @typeclass trait StringLiteralMembers[DT_StringLiteral] {
-    def value(sl: DT_StringLiteral): String
-  }
+  implicit def literalFold: Fold5[DT#Literal,
+    DT#LongLiteral, DT#DoubleLiteral, DT#BooleanLiteral, DT#UriLiteral, DT#TypedLiteral]
 
 
   trait LongLiteralCompanion extends Companion1[DT#LongLiteral] {
@@ -205,20 +192,26 @@ trait DatatreeDSL[DT <: Datatree] {
   }
 
 
-  trait TypedLiteralCompanion extends Companion2[DT#TypedLiteral] {
-    type A = String
-    type B = DT#Uri
+  trait TypedLiteralCompanion extends Companion3[DT#TypedLiteral] {
+    type A = DT#One[String]
+    type B = DT#ZeroOne[DT#Uri]
+    type C = DT#ZeroOne[String]
 
-    override def apply(value: A, valueType: B): DT#TypedLiteral
+    override def apply(value: A, valueType: B, lang: C): DT#TypedLiteral
   }
   implicit def TypedLiteral: TypedLiteralCompanion
 
   implicit def typedLiteralMembers: TypedLiteralMembers[DT#TypedLiteral]
   @typeclass trait TypedLiteralMembers[DT_TypedLiteral] {
-    def value(tl: DT_TypedLiteral): String
-    def valueType(tl: DT_TypedLiteral): DT#Uri
+    def value(tl: DT_TypedLiteral): DT#One[String]
+    def valueType(tl: DT_TypedLiteral): DT#ZeroOne[DT#Uri]
+    def lang(tl: DT_TypedLiteral): DT#ZeroOne[String]
   }
 
+  trait TypedLiteralSCompanion extends Companion1[DT#TypedLiteral] {
+    type A = String
+  }
+  implicit def TypedLiteralS: TypedLiteralSCompanion
 
   object Syntax {
 
@@ -233,7 +226,6 @@ trait DatatreeDSL[DT <: Datatree] {
                          with DocumentMembers.ToDocumentMembersOps
                          with DocumentRootMembers.ToDocumentRootMembersOps
                          with NamedPropertyMembers.ToNamedPropertyMembersOps
-                         with StringLiteralMembers.ToStringLiteralMembersOps
                          with LongLiteralMembers.ToLongLiteralMembersOps
                          with DoubleLiteralMembers.ToDoubleLiteralMembersOps
                          with BooleanLiteralMembers.ToBooleanLiteralMembersOps
@@ -242,7 +234,7 @@ trait DatatreeDSL[DT <: Datatree] {
 
   object SI5070 {
     implicit val propertyValueFromString: ConstructorChain[String, DT#PropertyValue] =
-      ConstructorChain.castT[String, DT#StringLiteral, DT#PropertyValue]
+      ConstructorChain.castT[String, DT#TypedLiteral, DT#PropertyValue]
 
     implicit val propertyValueFromUri: ConstructorChain[DT#Uri, DT#PropertyValue] =
       ConstructorChain.castT[DT#Uri, DT#UriLiteral, DT#PropertyValue]

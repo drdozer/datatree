@@ -132,9 +132,9 @@ trait DatatreeGenerators[DT <: Datatree] {
   import stringGenerators._
   import webGenerators._
 
-  implicit lazy val genStringLiteral: Gen[DT#StringLiteral] = for {
+  implicit lazy val genStringLiteral: Gen[DT#TypedLiteral] = for {
     value <- nonEmptyString
-  } yield StringLiteral(value)
+  } yield TypedLiteralS(value)
 
   implicit lazy val arbStringLiteral = Arbitrary { genStringLiteral }
 
@@ -358,7 +358,7 @@ abstract class RdfIoSpecification[DT <: Datatree](name: String) extends Properti
       (docRoot == read) :| f"original value should be equal to the value after write/read, which is:\n$read\n$written"
     }
 
-  lazy val `write/read string attribute` = forAll { (attr: DT#StringLiteral) =>
+  lazy val `write/read string attribute` = forAll { (attr: DT#TypedLiteral) =>
       val prop = NamedProperty(ZeroMany(ioConstants.rdf), One(ioConstants.rdf_rdf), One(attr))
       val writer = new StringWriter
       val xmlWriter = new IndentingXMLStreamWriter(

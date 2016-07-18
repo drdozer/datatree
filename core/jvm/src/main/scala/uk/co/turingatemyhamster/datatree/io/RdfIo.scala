@@ -175,7 +175,10 @@ trait RdfIo[DT <: Datatree] {
         case DoubleR(d) => DoubleLiteral(d.toDouble)
         case LongR(i) => LongLiteral(i.toLong)
         case BooleanR(b) => BooleanLiteral(b.toBoolean)
-        case s => StringLiteral(s)
+        case s => TypedLiteral(
+          One(s),
+          ZeroOne.fromOption(attrs.get(rdf_datatype) map Uri.apply),
+          ZeroOne.fromOption(attrs.get(rdf_lang)))
       }
 
       //        println(s"Reading property at ${reader.context}")
@@ -320,14 +323,14 @@ trait RdfIo[DT <: Datatree] {
       bindings(prop.bindings.seq)
       prop.value.get.fold(document,
         lit => lit.fold(
-          l => writer.writeCharacters(l.value),
           l => writer.writeCharacters(l.value.toString),
           l => writer.writeCharacters(l.value.toString),
           l => writer.writeCharacters(l.value.toString),
           l => writer.writeAttribute(rdf_resource, l.value),
           l => {
-            writer.writeAttribute(rdf_datatype : DT#QName, l.valueType)
-            writer.writeCharacters(l.value)
+            l.valueType.seq foreach (t => writer.writeAttribute(rdf_datatype : DT#QName, t.get))
+            l.lang.seq foreach (l => writer.writeAttribute(rdf_lang : DT#QName, l))
+            writer.writeCharacters(l.value.get)
           }))
       writer.writeEndElement()
     }
