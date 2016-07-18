@@ -14,7 +14,7 @@ trait RdfConstants[W <: Web] {
   import webDSL.Syntax._
 
   lazy val rdf = "rdf" -:- "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-  lazy val rdf_rdf = rdf :- "rdf"
+  lazy val rdf_rdf = rdf :- "RDF"
   lazy val rdf_about = rdf :- "about"
   lazy val rdf_resource = rdf :- "resource"
   lazy val rdf_datatype = rdf :- "datatype"
