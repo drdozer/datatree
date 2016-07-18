@@ -230,7 +230,7 @@ object AstDatatree {
 
 
     implicit object TypedLiteral extends TypedLiteralCompanion {
-      override def apply(a: String, b: String) = ast.TypedLiteral.apply(a, b)
+      override def apply(a: String, b: Uri) = ast.TypedLiteral.apply(a, b)
       override def unapply(t: AstDatatree#TypedLiteral) = ast.TypedLiteral.unapply(t)
     }
 
@@ -310,7 +310,7 @@ case class UriLiteral[Uri](value: Uri) extends Literal {
   type Value = Uri
 }
 
-case class TypedLiteral(value: String, xsdType: String) extends Literal {
+case class TypedLiteral(value: String, xsdType: Uri) extends Literal {
   type Value = String
 }
 

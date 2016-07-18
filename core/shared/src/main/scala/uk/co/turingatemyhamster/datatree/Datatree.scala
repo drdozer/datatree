@@ -207,7 +207,7 @@ trait DatatreeDSL[DT <: Datatree] {
 
   trait TypedLiteralCompanion extends Companion2[DT#TypedLiteral] {
     type A = String
-    type B = String
+    type B = DT#Uri
 
     override def apply(value: A, valueType: B): DT#TypedLiteral
   }
@@ -216,7 +216,7 @@ trait DatatreeDSL[DT <: Datatree] {
   implicit def typedLiteralMembers: TypedLiteralMembers[DT#TypedLiteral]
   @typeclass trait TypedLiteralMembers[DT_TypedLiteral] {
     def value(tl: DT_TypedLiteral): String
-    def valueType(tl: DT_TypedLiteral): String
+    def valueType(tl: DT_TypedLiteral): DT#Uri
   }
 
 
